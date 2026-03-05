@@ -1,3 +1,18 @@
+#!/bin/bash
+# 
+# Refactored by Kimberly Lazarski in March, 2026
+# Contact info: klazarsk@redhat.com
+#
+# Bugs fixed: Made compatible with modern builds of gnuplot 
+#             Added a shebang (interpreted scripts called from 
+#             a shell should always include a shebang so it runs
+#             even for users who use tcsh or other oddball shells!)
+#
+# Features added: 
+#  - Flexible command line options
+#    - Made pathing arbitrary
+#    - enabled ability to adapt to alternate install locations
+#    - Added help screen
 #
 # This script will create the Iozone graphs using
 # gnuplot. 
@@ -31,9 +46,20 @@ otagRed='\e[0;31m';
 otagRevRed='\e[0;101m';
 otagUline="\e[4m";
 otagItal="\e[3m";
-#########################
+###############################
+#
+cmdDate='date +%Y-%m-%d_%H:%M:%S';
+cmdDbgEcho="true";
+cmdDbgRead="true";
+cmdDbgSleep="true";
+cmdDbgAnyKey="true";
+cmdAnyKey='read -n 1 -s -r -p "Press any key to continue..."'
+
+#
+# Function Definitions
 
 fnHelp() {
+  # This is the help screen
   echo "This will be a help screen. Honest!"
 }
 
@@ -50,32 +76,64 @@ do
                     cmdDbgRead="read";
                     cmdDbgSleep="sleep";
                     cmdDbgEcho="echo";
+                    cmdDbgAnyKey='eval read -n 1 -s -r -p "Debug mode: Press any key to continue..."'
                     ;;
-    -i | --input ) shift;
-                   strInputFile="${1}"
+    -i | "--input"* ) if [[ "{$1}" != *'='* ]]; then shift; fi
+                   fileInput="${1##*=}"
+                   ;;
+    -w | "--working-dir"* ) if [[ "{$1}" != *'='* ]]; then shift; fi
+                   dirWorking="${1##*=}"
                    ;;
   esac ;
   shift ;
 done;
 
+###############################
+# Sanity checks
+#
+
+
+
+#
+###############################
+
+${cmdDbgEcho} "strIozone=${dirIozone}"
+${cmdDbgEcho} "strIozoneBin=${dirIozoneBin}"
+${cmdDbgEcho} "fileInput=${fileInput}"
+${cmdDbgEcho} "dirWorking=${dirWorking}"
+${cmdDbgAnyKey}
+
+if [[ "${dirWorking}" != "${PWD}" ]]; 
+then
+  if [ ! -d "${dirWorking}" ]; 
+  then
+    echo "ERROR: the specified --working-dir ${dirWorking} does not exist."
+    exit 1
+  fi;
+  pushd "${dirWorking}";
+  ${cmdDebugEcho} "${LINENO}: Switched to ${PWD} which should be ${dirWorking}"
+fi
 
 # Generate data base for all of the operation types.
 
-${strIozoneBin}/gengnuplot.sh "${strInputFile}" write
-${strIozoneBin}/gengnuplot.sh "${strInputFile}" rewrite
-${strIozoneBin}/gengnuplot.sh "${strInputFile}" read
-${strIozoneBin}/gengnuplot.sh "${strInputFile}" reread
-${strIozoneBin}/gengnuplot.sh "${strInputFile}" randread
-${strIozoneBin}/gengnuplot.sh "${strInputFile}" randwrite
-${strIozoneBin}/gengnuplot.sh "${strInputFile}" bkwdread
-${strIozoneBin}/gengnuplot.sh "${strInputFile}" recrewrite
-${strIozoneBin}/gengnuplot.sh "${strInputFile}" strideread
-${strIozoneBin}/gengnuplot.sh "${strInputFile}" fwrite
-${strIozoneBin}/gengnuplot.sh "${strInputFile}" frewrite
-${strIozoneBin}/gengnuplot.sh "${strInputFile}" fread
-${strIozoneBin}/gengnuplot.sh "${strInputFile}" freread
+"${dirIozoneBin}/gengnuplot.sh" "${fileInput}" write
+"${dirIozoneBin}/gengnuplot.sh" "${fileInput}" rewrite
+"${dirIozoneBin}/gengnuplot.sh" "${fileInput}" read
+"${dirIozoneBin}/gengnuplot.sh" "${fileInput}" reread
+"${dirIozoneBin}/gengnuplot.sh" "${fileInput}" randread
+"${dirIozoneBin}/gengnuplot.sh" "${fileInput}" randwrite
+"${dirIozoneBin}/gengnuplot.sh" "${fileInput}" bkwdread
+"${dirIozoneBin}/gengnuplot.sh" "${fileInput}" recrewrite
+"${dirIozoneBin}/gengnuplot.sh" "${fileInput}" strideread
+"${dirIozoneBin}/gengnuplot.sh" "${fileInput}" fwrite
+"${dirIozoneBin}/gengnuplot.sh" "${fileInput}" frewrite
+"${dirIozoneBin}/gengnuplot.sh" "${fileInput}" fread
+"${dirIozoneBin}/gengnuplot.sh" "${fileInput}" freread
 
 # Produce graphs and postscript results.
-gnuplot gnu3d.dem
+gnuplot "${dirIozoneBin}/gnu3d.dem"
 
-
+if [[ "$(dirs -0)" != "${PWD}"; ]];
+then
+  popd; 
+fi;
