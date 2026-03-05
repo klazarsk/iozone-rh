@@ -2,29 +2,78 @@
 # This script will create the Iozone graphs using
 # gnuplot. 
 #
-#
-#
 # ------------------------------------------------
 # YOU MUST PROVIDE A FILE NAME FOR IT TO PROCESS.
 # This filename is the name of the file where you 
 # sent Iozone's output.
 # ------------------------------------------------
 
+dirWorking="${PWD}"
+
+# if the config file exists, source it; it is expected to be 
+# a bash file to set up environment variables. Maybe change 
+# to .ini format later? 
+
+if [ -d /etc/iozone.conf ];
+then
+  source /etc/iozone.conf
+else
+  dirIozone="/opt/iozone"
+fi
+dirIozoneBin="${dirIozone}/bin"
+
+#########################
+#
+# Setting formatting tags
+otagBold="\e[1m";
+ctag="\e[0m";
+otagRed='\e[0;31m';
+otagRevRed='\e[0;101m';
+otagUline="\e[4m";
+otagItal="\e[3m";
+#########################
+
+fnHelp() {
+  echo "This will be a help screen. Honest!"
+}
+
+
+###############################
+# Since user gave us stuff to do, let's process arguments. Party on!
+while [ "$1" != "" ] ;
+do 
+  case $1 in
+    -h | --help )   fnHelp;
+                    exit 0;
+                    ;;
+    -D | --debug ) optDebug=1;
+                    cmdDbgRead="read";
+                    cmdDbgSleep="sleep";
+                    cmdDbgEcho="echo";
+                    ;;
+    -i | --input ) shift;
+                   strInputFile="${1}"
+                   ;;
+  esac ;
+  shift ;
+done;
+
+
 # Generate data base for all of the operation types.
 
-./gengnuplot.sh $1 write
-./gengnuplot.sh $1 rewrite
-./gengnuplot.sh $1 read
-./gengnuplot.sh $1 reread
-./gengnuplot.sh $1 randread
-./gengnuplot.sh $1 randwrite
-./gengnuplot.sh $1 bkwdread
-./gengnuplot.sh $1 recrewrite
-./gengnuplot.sh $1 strideread
-./gengnuplot.sh $1 fwrite
-./gengnuplot.sh $1 frewrite
-./gengnuplot.sh $1 fread
-./gengnuplot.sh $1 freread
+${strIozoneBin}/gengnuplot.sh "${strInputFile}" write
+${strIozoneBin}/gengnuplot.sh "${strInputFile}" rewrite
+${strIozoneBin}/gengnuplot.sh "${strInputFile}" read
+${strIozoneBin}/gengnuplot.sh "${strInputFile}" reread
+${strIozoneBin}/gengnuplot.sh "${strInputFile}" randread
+${strIozoneBin}/gengnuplot.sh "${strInputFile}" randwrite
+${strIozoneBin}/gengnuplot.sh "${strInputFile}" bkwdread
+${strIozoneBin}/gengnuplot.sh "${strInputFile}" recrewrite
+${strIozoneBin}/gengnuplot.sh "${strInputFile}" strideread
+${strIozoneBin}/gengnuplot.sh "${strInputFile}" fwrite
+${strIozoneBin}/gengnuplot.sh "${strInputFile}" frewrite
+${strIozoneBin}/gengnuplot.sh "${strInputFile}" fread
+${strIozoneBin}/gengnuplot.sh "${strInputFile}" freread
 
 # Produce graphs and postscript results.
 gnuplot gnu3d.dem
