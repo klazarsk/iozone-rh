@@ -17,7 +17,7 @@ set grid lt 1 lc rgb "#DDDDDD"
 # This keeps legacy functionality of dumping each output file in a discrete directory
 dirs = "write rewrite read reread randread randwrite bkwdread recrewrite strideread fwrite frewrite fread freread"
 ## This is an improvement over the original graph titles
-titles = 'Write ReWrite Read Reread "Random read" "Random write" "Read Backwards" "Record rewrite" "Stride read" Fwrite Frewrite Fread Freread'
+titles = 'Write Re-Write Read Re-Read "Random Read" "Random Write" "Read Backward" "Record Rewrite" "Strided Read" Fwrite Frewrite Fread Freread'
 
 # Helper functions
 ## We need to further improve path and file handling; this is a direct
