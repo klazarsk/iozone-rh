@@ -66,9 +66,9 @@ fnHelp() {
 
 ###############################
 # Since user gave us stuff to do, let's process arguments. Party on!
-while [ "$1" != "" ] ;
+while [ "${1}" != "" ] ;
 do 
-  case $1 in
+  case ${1} in
     -h | --help )   fnHelp;
                     exit 0;
                     ;;
@@ -78,10 +78,10 @@ do
                     cmdDbgEcho="echo";
                     cmdDbgAnyKey='eval read -n 1 -s -r -p "Debug mode: Press any key to continue..."'
                     ;;
-    -i | "--input"* ) if [[ "{$1}" != *'='* ]]; then shift; fi
+    -i | "--input"* ) if [[ "${1}" != *'='* ]]; then shift; fi
                    fileInput="${1##*=}"
                    ;;
-    -w | "--working-dir"* ) if [[ "{$1}" != *'='* ]]; then shift; fi
+    -w | "--working-dir"* ) if [[ "${1}" != *'='* ]]; then shift; fi
                    dirWorking="${1##*=}"
                    ;;
   esac ;
@@ -133,7 +133,7 @@ fi
 # Produce graphs and postscript results.
 gnuplot "${dirIozoneBin}/gnu3d.dem"
 
-if [[ "$(dirs -0)" != "${PWD}"; ]];
+if [[ "$(dirs -0)" != "${PWD}" ]];
 then
   popd; 
 fi;
