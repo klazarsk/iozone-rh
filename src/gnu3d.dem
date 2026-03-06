@@ -1,5 +1,9 @@
+# Refactored by Kimberly Lazarski in March, 2026
+# Contact info: klazarsk@redhat.com
+#
 # This refactoring fixes the gnuplot compatibility bug, and iterates over
 # the reports rather than duplicating code for each report. 
+
 
 # Global Setup (Colors & Fonts)
 ## Using the 'cairo' terminal for much better font rendering and anti-aliasing
@@ -23,6 +27,8 @@ titles = 'Write Re-Write Read Re-Read "Random Read" "Random Write" "Read Backwar
 ## We need to further improve path and file handling; this is a direct
 ## copy of how the original project handled it. It is OK but clunky. It
 ## also assumes one is working under /opt/iozone/bin (bad design!)
+# Note: Changes we made to Generate_Graphs and gengnuplot.sh have already 
+# tremendously improved this. Still... the original design choice is... yeah.
 get_file(n) = sprintf("%s/iozone_gen_out.gnuplot", word(dirs,n))
 get_out(n)  = sprintf("%s/%s.pdf", word(dirs,n), word(dirs,n))
 get_title(n) = word(titles,n)
@@ -32,7 +38,7 @@ set logscale x 2
 set logscale y 2
 set xlabel "File size (kB)"
 set ylabel "Record size (kB)"
-set zlabel "kB/sec" rotate by 90
+set zlabel "kB/sec\n" offset character -3 rotate by 90
 # "qnorm 3" is required with newer version of gnuplot
 set dgrid3d 80,80 qnorm 3
 

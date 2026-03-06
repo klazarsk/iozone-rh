@@ -82,7 +82,9 @@ do
                    fileInput="${1##*=}"
                    ;;
     -w | "--working-dir"* ) if [[ "${1}" != *'='* ]]; then shift; fi
-                   dirWorking="${1##*=}"
+                   optWorking="${1##*=}"
+                   dirWorking="${optWorking%/}"
+                   unset optWorking;
                    ;;
   esac ;
   shift ;
