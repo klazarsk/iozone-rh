@@ -46,7 +46,7 @@ write_gnuplot_file() {
 #filename=$1
 filename=iozone_gen_out
 query=$2
-if (! [ -e ${query} ] ) ; then mkdir ${query}; fi
+if (! [ -e "${query}" ] ) ; then mkdir "${query}"; fi
 if ( [ $# -eq 2 ] ) ; 
 	then 
 		write_gnuplot_file > ${query}/`basename "${file_name}".gnuplot`
