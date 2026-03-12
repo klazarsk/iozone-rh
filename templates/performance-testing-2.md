@@ -1,82 +1,3 @@
-<!--
-
-
-Command to render PDF: pandoc -f markdown_phpextra+raw_html coversheet.md -t html --pdf-engine=wkhtmltopdf --pdf-engine-opt=--enable-local-file-access --pdf-engine-opt=--margin-top --pdf-engine-opt=0 --pdf-engine-opt=--margin-bottom --pdf-engine-opt=0 --pdf-engine-opt=--margin-left --pdf-engine-opt=0 --pdf-engine-opt=--margin-right --pdf-engine-opt=0 --pdf-engine-opt=--page-size --pdf-engine-opt=Letter -o coversheet.pdf
-
-Command to check PDF rendering and verify via a virtual screenshot (coversheet.png): pdftoppm -png -f 1 -l 1 coversheet.pdf coversheet.png
--->
-<style>
-@page {
-    margin: 0;
-}
-
-html {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    /* Forced scaling to ensure it hits all edges */
-    background-image: url("file:///%dirIozone%/img/redhatConsulting.svg"); 
-    background-position: center center;
-    background-repeat: no-repeat;
-    background-size: 100% 100%;
-}
-
-body {
-    margin: 0;
-    /* 
-       padding-top: 2.5in clears the top of the watermark.
-       padding-bottom: 1.0in ensures a margin at the bottom of the first page.
-    */
-    padding: 2.5in 0.5in 1.0in 0.5in;
-    box-sizing: border-box;
-    /* Disable Pandoc's default max-width constraint */
-    max-width: none !important; 
-    width: 100% !important;
-    font: 16px/1.5 "RedHatText-Regular", sans-serif; 
-    background: transparent;
-}
-
-p {                                                                             
-   font: small-caps 12px/1.5 "RedHatText-Regular", sans-serif;                   
-}                                                                               
-                                                                                
-h1 {                                                                            
-   font-size: 36px;
-   font-family: "RedHatText-Bold", sans-serif;
-   margin-top: 0;
-}
-
-h2 {                                                                            
-   font-size: 24px;
-   font-family: "RedHatText-Bold", sans-serif;
-   margin-top: 0;
-}
-.logo {
-   width: 300px;
-   height: auto;
-   display: block;
-}
-
-table {
-   width: 100%;
-   border-collapse: collapse;
-   border: none !important;
-   table-layout: fixed; /* Ensures column widths are respected */
-}
-
-td {
-   vertical-align: top;
-   border: none !important;
-   padding: 0;
-}
-
-/* Colgroup ensures the first column is wide enough for the logo */
-.col-logo { width: 300px; }
-.col-text { width: auto; }
-
-</style>
-
-
 <table width="100%">
 <colgroup>
     <col class="col-logo">
@@ -84,7 +5,7 @@ td {
 </colgroup>
 <!-- This table should be below/after the graphics at the top of the background/watermark. -->
 <tr>
-    <td><img src="file://%dirIozone%/img/RedHat-Speedo.svg" class="logo" /></td>
+    <td><img src="file:///home/klazarsk/github/iozone/img/RedHat-Speedo.svg" class="logo" /></td>
     <td style="text-align: right; font-weight: bold;">
       <h1>Storage Benchmark Testing</h1>
       <h2>Red Hat Consulting</h2>
