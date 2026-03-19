@@ -444,6 +444,10 @@ done;
 # Now, generate the Completed graph and integrate the reports
 #
 
+# pandoc -f markdown_phpextra+raw_html ReportPage.md -t html -c ../styles/reportpage.css --pdf-engine=wkhtmltopdf \
+#  --pdf-engine-opt=--enable-local-file-access --pdf-engine-opt=--margin-top --pdf-engine-opt=0 --pdf-engine-opt=--margin-bottom \
+#  --pdf-engine-opt=0 --pdf-engine-opt=--margin-left --pdf-engine-opt=0 --pdf-engine-opt=--margin-right --pdf-engine-opt=0 \
+#  --pdf-engine-opt=--page-size --pdf-engine-opt=Letter -o reportpage.pdf
 
 
 
