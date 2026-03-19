@@ -33,9 +33,11 @@ if [ -d /etc/iozone.conf ];
 then
   source /etc/iozone.conf
 else
-  dirIozone="/opt/iozone"
+  #dirIozone="/opt/iozone"
+  dirIozone="/home/klazarsk/github/iozone/src"
 fi
-dirIozoneBin="${dirIozone}/bin"
+#dirIozoneBin="${dirIozone}/bin"
+dirIozoneBin="${dirIozone}"
 
 #########################
 #
