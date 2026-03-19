@@ -288,7 +288,6 @@ fi;
 # Do the stuff Generate_Graphs attempted to do, but do it smarter and better
 #
 
-cp "${dirIozoneBin}/gnu3d.dem" . 
 for itemBenchmark in "${arrBenchmarks[@]}";
 do
 
