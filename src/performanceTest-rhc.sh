@@ -29,6 +29,14 @@
 # Set some sane default values for stuff 
 
 dirWorking="${PWD}";
+# get the command line with arguments
+cmdLine="${0} ${@}";
+declare -a arrBenchmarks
+for itemBenchmark in write rewrite read reread randread randwrite bkwdread recrewrite strideread fwrite frewrite fread freread;
+do
+  arrBenchmarks+=("${item}");
+done;
+unset itemBenchmark;
 
 # if the config file exists, source it; it is expected to be
 # a bash file to set up environment variables. Maybe change
@@ -117,7 +125,8 @@ do
     -h | "--help" )   fnHelp;
                     exit 0;
                     ;;
-    -c | "--columns" ) if [[ "$1" =~ ^[0-9]+$ ]]; optColumns=$1; fi;
+    -c | "--columns" ) if [[ "${1}" != *'='* ]]; then shift; fi;
+                    if [[ "$1" =~ ^[0-9]+$ ]]; then optColumns=$1; fi;
                     ;;
     -D | "--debug" )  optDebug=1;
                       cmdDbgRead="read";
@@ -140,11 +149,13 @@ do
                     ;;
     -s | "--skip-benchmark" ) optSkipBenchmark=1;
                     ;;
+    -S | "--setup-templates" ) optSetupTemplates=1;
+                    ;;
     -t | "--threads" ) if [[ "${1}" != *'='* ]]; then shift; fi;
                       if [[ "${1}" =~ [^0-9] ]]; 
                       then
                         echo "${otagBold}${otagRed}--threads=${1} does not specify an integer; please check your command and try again.${ctag}";
-                        echo "Command: ${0}";
+                        echo "Command: ${cmdLine}";
                         exit 1;  
                       fi;
                       intThreads="-t ${1##*=}";
@@ -156,8 +167,8 @@ do
                       dirWorking="${dirWorking%/}";
                     ;;
     * ) if [[ "${1}" != *'='* ]]; then shift; fi;
-                      dirWorking="${1##*=}";
-                      dirWorking="${dirWorking%/}";
+                      fnHelp;
+                      exit 1;
                     ;;
   esac ;
   shift ;
@@ -168,12 +179,14 @@ done;
 #
 
 
-${cmdDbgEcho} "strIozone=${dirIozone}";echo "Command: ${0}";
+${cmdDbgEcho} "strIozone=${dirIozone}";
+echo "Command: ${cmdLine}";
                         
 ${cmdDbgEcho} "strIozoneBin=${dirIozoneBin}";
 ${cmdDbgEcho} "fileInput=${fileInput}";
 ${cmdDbgEcho} "dirWorking=${dirWorking}";
 ${cmdDbgAnyKey};
+
 
 # Check and set $dirWorking sanely
 if [[ "${dirWorking}" != "${PWD}" ]];
@@ -181,12 +194,11 @@ then
   if [ ! -d "${dirWorking}" ];
   then
     echo "${otagBold}${otagRed}ERROR: the specified --working-dir [${dirWorking} ] does not exist.${ctag}";
-    echo "Command: ${0}";
+    echo "Command: ${cmdLine}";
     exit 1;
   fi;
   pushd "${dirWorking}";
-  ${cmdDebugEcho} "${LINENO}: Switched to ${PWD} which should be ${dirWorking}";
-  fi;
+  ${cmdDebugEcho} "${LINENO}: Switched to ${PWD} which should be --working-dir=${dirWorking}";
 fi;
 
 # Verify the test path exists
@@ -195,14 +207,14 @@ then
   if [ ! -d "${dirTestPath}" ];
   then
     echo "${otagBold}${otagRed}ERROR: the specified --test-path ${dirTestPath} does not exist. Check your command and try again.${ctag}";
-    echo "Command line: ${0}";
+    echo "Command line: ${cmdLine}";
     exit 1;
   fi;
   dirTestPath="-f ${dirTestPath}";
 fi;
 
 # Advise user when # threads > # vCPUs
-if [[ "${intThreads}" -gt "$(proc)" ]];
+if [[ "${intThreads}" -gt "$(nproc)" ]];
 then
   echo "--threads=${1} is greater than the number of threads (${nproc}) that the number of CPUs this this system has.";
   for intCount in {05..01} ; 
@@ -214,6 +226,32 @@ then
   echo "...Continuing";
 fi;
 
+#
+###################################
+#
+## Set up the report directory  
+##  - ensure the call is exclusive
+##  - copy original templates over 
+#
+
+  if [[ -n "${optSetupTemplates}" ]]
+  then
+    if [[ -n "${filInput}" || -n "${dirTestPath}" || -n "${dirMountPoint}" ]];
+    then
+      echo "${otagBold}${otagRed}ERROR: --setup-templates is to be run exclusively.${ctag}";
+      fnHelp;
+      exit 1;
+    fi;
+  else
+    mkdir templates;
+    cp -v "${dirIozone}/templates/*.md" "${dirWorking}/templates/";
+    echo "The base templates have been copied to ${dirWorking/templates}. For customized 
+    reports, edit the markdown files in ${dirWorking}/templates to add your analysis 
+    and recommendations.";
+    exit 0; 
+  fi;
+
+#
 ###################################
 # 
   # run iozone and generate the data
@@ -250,7 +288,8 @@ fi;
 # Do the stuff Generate_Graphs attempted to do, but do it smarter and better
 #
 
-for itemReport in write rewrite read reread randread randwrite bkwdread recrewrite strideread fwrite frewrite fread freread;
+cp "${dirIozoneBin}/gnu3d.dem" . 
+for itemBenchmark in "${arrBenchmarks[@]}";
 do
 
   #################################
@@ -259,7 +298,7 @@ do
   ## create the html raw data report using RedHatText fonts
   #
 
-  "${dirIozoneBin}/gengnuplot.sh" "${fileInput}" ${itemReport};
+  "${dirIozoneBin}/gengnuplot.sh" "${fileInput}" ${itemBenchmark};
   
   #
   ## Isn't this a better way to do it? 
@@ -279,7 +318,7 @@ do
   ## This is where the real work begins
   ## 
   
-  pushd ${itemReport};
+  pushd "${itemBenchmark}";
 
   unset arrPerformance;
   declare -A arrPerformance;
@@ -299,10 +338,10 @@ do
   done;
   #echo "${grdColumns} break"; sleep 9000;
   
-  echo "Redirecting output to ${PWD}/${itemReport}...";
+  echo "Redirecting output to ${PWD}/${itemBenchmark}...";
   #_# stdout redirected to file for prod, to console for --debug
   ${cmdExec} 3>&1;
-  ecec 1>"${itemReport}.html";
+  ecec 1>"${itemBenchmark}.html";
   echo -n '
   <style>
   
@@ -315,7 +354,10 @@ do
     gap: 10px; /* Adds spacing between items */
   }
   
-  .grid-container div {
+  .grid-container div {#
+
+
+
     border: 1px solid #ccc;
     padding: 8pt;
     text-align: center;
@@ -330,8 +372,7 @@ do
     text-align: center;
     font: small-caps 12pt "RedHatText-Bold", sans-serif;
     margin-top: 0;
-    font-weight: bold;
-  }
+    font-weight: bold; 
   
   .tdheading {
     text-align: center;
@@ -352,7 +393,7 @@ do
   
   ';
   
-  echo "<h1>Performance benchmark: ${itemReport}, raw data.</h1>";
+  echo "<h1>Performance benchmark: ${itemBenchmark}, raw data.</h1>";
   for szFile in $(awk '$1 ~ /^[0-9]/ {print $1}' iozone_gen_out.gnuplot | uniq);
   do
     ((intCounter++));
@@ -389,24 +430,34 @@ do
   ${cmdExec} 1>&3;
   popd;
   echo "stdout redirected back to screen!"
+
+  ###################################
+  ############################
+  ####################
+  #############
   ######
-  ##############
-  ########################
-  ##########################################
-
-
-
-  #
-  #
-  ##########################
-
-
 
 done;
 
-# Produce graphs and postscript results.
-gnuplot "${dirIozoneBin}/gnu3d.dem";
+#
+###################################
+#
+# Now, generate the Completed graph and integrate the reports
+#
 
+
+
+
+#
+#
+##########################
+
+
+
+
+# Produce graphs and postscript results.
+
+###
 if [[ "$(dirs -0)" != "${PWD}" ]];
 then
   popd;
