@@ -31,29 +31,32 @@
 dirWorking="${PWD}";
 # get the command line with arguments
 cmdLine="${0} ${@}";
-declare -a arrBenchmarks
+unset arrBenchmarks;
+declare -a arrBenchmarks;
 for itemBenchmark in write rewrite read reread randread randwrite bkwdread recrewrite strideread fwrite frewrite fread freread;
 do
-  arrBenchmarks+=("${item}");
+  arrBenchmarks+=("${itemBenchmark}");
 done;
 unset itemBenchmark;
+intColumns=4;
 
-# if the config file exists, source it; it is expected to be
-# a bash file to set up environment variables. Maybe change
-# to .ini format later?
+echo "arrBenchmarks: [${arrBenchmarks[@]}]"
+#echo "Pausing for 5 seconds..."
+#sleep 5;
 
 if [ -e /etc/iozone.conf ];
 then
   source /etc/iozone.conf;
 else
   #dirIozone="/opt/iozone"
-  dirIozone="/home/klazarsk/github/iozone/src";
+  dirIozone="/opt/iozone";
 fi;
-#dirIozoneBin="${dirIozone}/bin"
-dirIozoneBin="${dirIozone}";
+dirIozoneBin="${dirIozone}/bin"
+#dirIozoneBin="${dirIozone}";
 unset intThreads;
-
+unset optSetupTemplates;
 optUnmount=0;
+
 
 ###############################
 #
@@ -126,7 +129,7 @@ do
                     exit 0;
                     ;;
     -c | "--columns" ) if [[ "${1}" != *'='* ]]; then shift; fi;
-                    if [[ "$1" =~ ^[0-9]+$ ]]; then optColumns=$1; fi;
+                    if [[ "$1" =~ ^[0-9]+$ ]]; then intColumns=$1; fi;
                     ;;
     -D | "--debug" )  optDebug=1;
                       cmdDbgRead="read";
@@ -136,8 +139,8 @@ do
                       cmdExec="true";
                     ;;
     -i | "--input"* ) if [[ "${1}" != *'='* ]]; then shift; fi;
-                      filInput="${1##*=}";
-                      filInput="${filInput%/}";
+                      fileInput="${1##*=}";
+                      fileInput="${fileInput%/}";
                     ;;
     -m | "--mountpoint" ) if [[ "${1}" != *'='* ]]; then shift; fi; 
                       dirMountPoint="${1##*=}";
@@ -164,7 +167,7 @@ do
                     ;;
     -w | "--working-dir" ) if [[ "${1}" != *'='* ]]; then shift; fi; 
                       dirWorking="${1##*=}";
-                      dirWorking="${dirWorking%/}";
+                      dirWorking="${dirWorking%5;/}";
                     ;;
     * ) if [[ "${1}" != *'='* ]]; then shift; fi;
                       fnHelp;
@@ -180,6 +183,7 @@ done;
 
 
 ${cmdDbgEcho} "strIozone=${dirIozone}";
+
 echo "Command: ${cmdLine}";
                         
 ${cmdDbgEcho} "strIozoneBin=${dirIozoneBin}";
@@ -234,21 +238,22 @@ fi;
 ##  - copy original templates over 
 #
 
-  if [[ -n "${optSetupTemplates}" ]]
+
+  if [[ "${optSetupTemplates}" -eq 1 ]];
   then
-    if [[ -n "${filInput}" || -n "${dirTestPath}" || -n "${dirMountPoint}" ]];
+    if [[ -n "${fileInput}" || -n "${dirTestPath}" || -n "${dirMountPoint}" ]];
     then
       echo "${otagBold}${otagRed}ERROR: --setup-templates is to be run exclusively.${ctag}";
       fnHelp;
       exit 1;
+    else
+      mkdir templates;
+      cp -v "${dirIozone}/templates/*.md" "${dirWorking}/templates/";
+      echo "The base templates have been copied to ${dirWorking/templates}. For customized 
+      reports, edit the markdown files in ${dirWorking}/templates to add your analysis 
+      and recommendations.";
+      exit 0; 
     fi;
-  else
-    mkdir templates;
-    cp -v "${dirIozone}/templates/*.md" "${dirWorking}/templates/";
-    echo "The base templates have been copied to ${dirWorking/templates}. For customized 
-    reports, edit the markdown files in ${dirWorking}/templates to add your analysis 
-    and recommendations.";
-    exit 0; 
   fi;
 
 #
@@ -256,13 +261,13 @@ fi;
 # 
   # run iozone and generate the data
 
-  if [ "${optUnmount}" -eq 1 ];
+  if [[ "${optUnmount}" -eq 1 ]];
    then 
     fnCheckMount;
     argUmount="-U ${dirMountPoint}";
   fi;
 
-  if [ "${optSkipBenchmark}" -ne 1 ];
+  if [[ "${optSkipBenchmark}" -ne 1 ]];
   then
     if [[ -z "${intThreads}" ]];
     then
@@ -296,9 +301,16 @@ do
   ## Generate the individual report databases and
   ## create the html raw data report using RedHatText fonts
   #
-
+  echo "dirIozoneBin=${dirIozoneBin}"
+  echo "Attempting to plot graph for ${itemBenchmark}"
+  echo "fileInput=${fileInput}"
+  ls -lh "${dirIozoneBin}/gengnuplot.sh"
+  echo "Pausing for 5 seconds..."
+  #sleep 5
   "${dirIozoneBin}/gengnuplot.sh" "${fileInput}" ${itemBenchmark};
+  #"${dirIozoneBin}/Generate_Graphs" --input="${fileInput}";
   
+  # ${itemBenchmark};
   #
   ## Isn't this a better way to do it? 
   ## This concludes the stuff Generate_Graphs originally tried to do. That's 
@@ -306,7 +318,13 @@ do
   ## systems analysis.
   #
   # ###############################
+done;
+echo "running gnuplot"
+gnuplot "${dirIozoneBin}/gnu3d.dem"
+unset itemBenchmark;
 
+for itemBenchmark in "${arrBenchmarks[@]}";
+do
   ######
   #############
   ####################
@@ -322,25 +340,22 @@ do
   unset arrPerformance;
   declare -A arrPerformance;
   unset intCounter;
-  # number of columns for table grid
-  intColumns="optColumns";
   # percentage width for tables in grid
   perWidth=$(( 100 / ${intColumns} ));
   unset grdColumns;
   for intCounter in $(seq 1 ${intColumns} );
   do
-    ${cmdDbgEcho} "reticulating splines" >2;
+    ${cmdDbgEcho} "reticulating splines" >&2;
     grdColumns+="1fr ";
   done;
   
   
-  done;
   #echo "${grdColumns} break"; sleep 9000;
   
-  echo "Redirecting output to ${PWD}/${itemBenchmark}...";
+  echo "Redirecting output to ${PWD}/${itemBenchmark}.html";
   #_# stdout redirected to file for prod, to console for --debug
   ${cmdExec} 3>&1;
-  ecec 1>"${itemBenchmark}.html";
+  exec >"${itemBenchmark}.html";
   echo -n '
   <style>
   
@@ -428,7 +443,7 @@ do
   #_# redirect stdout back to the terminal
   ${cmdExec} 1>&3;
   popd;
-  echo "stdout redirected back to screen!"
+  echo "stdout redirected back to screen!";
 
   ###################################
   ############################
@@ -457,10 +472,6 @@ done;
 
 
 
-
-# Produce graphs and postscript results.
-
-###
 if [[ "$(dirs -0)" != "${PWD}" ]];
 then
   popd;

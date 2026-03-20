@@ -8,6 +8,8 @@
 # Global Setup (Colors & Fonts)
 ## Using the 'cairo' terminal for much better font rendering and anti-aliasing
 set terminal pdfcairo enhanced color font "Verdana,12" size 6,4
+set terminal svg 
+
 ## Modern shaded surface - much better than the wireframe for our purposes
 ## TODO: Make this configurable via /etc/iozone.conf or command switch?
 ##       There may be situations where we WANT the wireframe style
@@ -30,7 +32,7 @@ titles = 'Write Re-Write Read Re-Read "Random Read" "Random Write" "Read Backwar
 # Note: Changes we made to Generate_Graphs and gengnuplot.sh have already 
 # tremendously improved this. Still... the original design choice is... yeah.
 get_file(n) = sprintf("%s/iozone_gen_out.gnuplot", word(dirs,n))
-get_out(n)  = sprintf("%s/%s.pdf", word(dirs,n), word(dirs,n))
+get_out(n)  = sprintf("%s/%s.svg", word(dirs,n), word(dirs,n))
 get_title(n) = word(titles,n)
 
 # Plotting Logic ---

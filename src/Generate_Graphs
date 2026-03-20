@@ -34,10 +34,10 @@ then
   source /etc/iozone.conf
 else
   #dirIozone="/opt/iozone"
-  dirIozone="/home/klazarsk/github/iozone/src"
+  dirIozone="/opt/iozone"
 fi
 #dirIozoneBin="${dirIozone}/bin"
-dirIozoneBin="${dirIozone}"
+dirIozoneBin="${dirIozone}/bin"
 
 #########################
 #
@@ -80,10 +80,10 @@ do
                     cmdDbgEcho="echo";
                     cmdDbgAnyKey='eval read -n 1 -s -r -p "Debug mode: Press any key to continue..."'
                     ;;
-    -i | "--input"* ) if [[ "${1}" != *'='* ]]; then shift; fi
+    -i | "--input" ) if [[ "${1}" != *'='* ]]; then shift; fi
                    fileInput="${1##*=}"
                    ;;
-    -w | "--working-dir"* ) if [[ "${1}" != *'='* ]]; then shift; fi
+    -w | "--working-dir" ) if [[ "${1}" != *'='* ]]; then shift; fi
                    optWorking="${1##*=}"
                    dirWorking="${optWorking%/}"
                    unset optWorking;
