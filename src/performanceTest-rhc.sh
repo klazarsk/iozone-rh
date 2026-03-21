@@ -52,11 +52,13 @@ else
   dirIozone="/opt/iozone";
 fi;
 dirIozoneBin="${dirIozone}/bin"
-#dirIozoneBin="${dirIozone}";
+#dirIozoneBin="${dirIozone}";performanceTest-rhc.sh
 unset intThreads;
 unset optSetupTemplates;
 optUnmount=0;
-
+fileInput="iozone.out"
+echo "id: $(id)"
+touch foo; ls -lh foo; rm foo;
 
 ###############################
 #
@@ -83,7 +85,7 @@ cmdDbgAnyKey="true";
 cmdExec="exec"; 
 
 #
-###############################
+###############################${LINENO}:
 #
 # Function Definitions
 
@@ -125,28 +127,28 @@ fnCheckMount() {
 while [ "${1}" != "" ] ;
 do
   case ${1} in
-    -h | "--help" )   fnHelp;
+    -h | "--help" ) fnHelp;
                     exit 0;
                     ;;
-    -c | "--columns" ) if [[ "${1}" != *'='* ]]; then shift; fi;
+    -c | "--columns"* ) if [[ "${1}" != *'='* ]]; then shift; fi;
                     if [[ "$1" =~ ^[0-9]+$ ]]; then intColumns=$1; fi;
                     ;;
     -D | "--debug" )  optDebug=1;
                       cmdDbgRead="read";
                       cmdDbgSleep="sleep";
                       cmdDbgEcho="echo";
-                      cmdDbgAnyKey='eval read -n 1 -s -r -p "Debug mode: Press any key to continue..."';
+                      cmdDbgAnyKey='eval echo  "Debug mode: Press any key to continue..."; read -n 1 -s -r ';
                       cmdExec="true";
                     ;;
     -i | "--input"* ) if [[ "${1}" != *'='* ]]; then shift; fi;
                       fileInput="${1##*=}";
                       fileInput="${fileInput%/}";
                     ;;
-    -m | "--mountpoint" ) if [[ "${1}" != *'='* ]]; then shift; fi; 
+    -m | "--mountpoint"* ) if [[ "${1}" != *'='* ]]; then shift; fi; 
                       dirMountPoint="${1##*=}";
                       dirMountPoint="${dirMountPoint%/}";
                     ;;
-    -p | "--test-path" ) if [[ "${1}" != *'='* ]]; then shift; fi;
+    -p | "--test-path"* ) if [[ "${1}" != *'='* ]]; then shift; fi;
                       dirTestPath="${1##*=}";
                       dirTestPath="${dirTestPath%/}";
                     ;;
@@ -154,20 +156,21 @@ do
                     ;;
     -S | "--setup-templates" ) optSetupTemplates=1;
                     ;;
-    -t | "--threads" ) if [[ "${1}" != *'='* ]]; then shift; fi;
-                      if [[ "${1}" =~ [^0-9] ]]; 
+    -t | "--threads"* ) if [[ "${1}" != *'='* ]]; then shift; fi;
+                      intThreads="${1##*=}";
+                      if [[ "${intThreads}" =~ [^0-9] ]]; 
                       then
-                        echo "${otagBold}${otagRed}--threads=${1} does not specify an integer; please check your command and try again.${ctag}";
+                        echo -e "${otagBold}${otagRed}--threads=${intThreads} does not specify an integer; please check your command and try again.${ctag}";
                         echo "Command: ${cmdLine}";
                         exit 1;  
                       fi;
-                      intThreads="-t ${1##*=}";
                     ;;
     -u | "--unmount" ) optUnmount=1;
                     ;;
-    -w | "--working-dir" ) if [[ "${1}" != *'='* ]]; then shift; fi; 
+    -w | "--working-dir"* ) if [[ "${1}" != *'='* ]]; then shift; fi; 
                       dirWorking="${1##*=}";
-                      dirWorking="${dirWorking%5;/}";
+                      dirWorking="${dirWorking%/}";
+                      ${cmdDbgEcho} "${LINENO}: Setting dirWorking=${dirWorking}";
                     ;;
     * ) if [[ "${1}" != *'='* ]]; then shift; fi;
                       fnHelp;
@@ -181,7 +184,7 @@ done;
 # Sanity checks
 #
 
-
+echo "checking arguments for sanity's sake";
 ${cmdDbgEcho} "strIozone=${dirIozone}";
 
 echo "Command: ${cmdLine}";
@@ -193,16 +196,18 @@ ${cmdDbgAnyKey};
 
 
 # Check and set $dirWorking sanely
+echo "dirWorking=${dirWorking} and PWD=${PWD}";
 if [[ "${dirWorking}" != "${PWD}" ]];
 then
-  if [ ! -d "${dirWorking}" ];
+  if [ -d "${dirWorking}" ];
   then
+    pushd "${dirWorking}";
+    ${cmdDebugEcho} "${LINENO}: Switched to ${PWD} which should be --working-dir=${dirWorking}";
+  else
     echo "${otagBold}${otagRed}ERROR: the specified --working-dir [${dirWorking} ] does not exist.${ctag}";
     echo "Command: ${cmdLine}";
     exit 1;
   fi;
-  pushd "${dirWorking}";
-  ${cmdDebugEcho} "${LINENO}: Switched to ${PWD} which should be --working-dir=${dirWorking}";
 fi;
 
 # Verify the test path exists
@@ -214,20 +219,37 @@ then
     echo "Command line: ${cmdLine}";
     exit 1;
   fi;
-  dirTestPath="-f ${dirTestPath}";
+else
+  dirTestPath="{PWD}";
 fi;
 
 # Advise user when # threads > # vCPUs
 if [[ "${intThreads}" -gt "$(nproc)" ]];
 then
-  echo "--threads=${1} is greater than the number of threads (${nproc}) that the number of CPUs this this system has.";
+  echo "--threads=${intThreads} is greater than the number of threads $(nproc) that the number of CPUs this this system has.";
+  ${cmdDbgAnyKey};
   for intCount in {05..01} ; 
   do 
     echo -n "${intCount}..."; 
-    sleep 1; 
+    sleep 12; 
     echo -en "\b\b\b\b\b" ; 
   done;
   echo "...Continuing";
+fi;
+${cmdDbgAnyKey};
+
+if [[ -d "${dirWorking/templates}" ]];
+then
+  dirTemplates="${dirWorking}/templates";
+else
+  dirTemplates="${dirIozone}/templates";
+fi;
+
+if [[ -d "${dirWorking}/styles" ]]
+then
+  dirTemplates="${dirWorking}/styles";
+else
+  dirTemplates="${dirIozone}/styles";
 fi;
 
 #
@@ -263,7 +285,7 @@ fi;
 
   if [[ "${optUnmount}" -eq 1 ]];
    then 
-    fnCheckMount;
+    fnCheckMount;￼
     argUmount="-U ${dirMountPoint}";
   fi;
 
@@ -271,6 +293,7 @@ fi;
   then
     if [[ -z "${intThreads}" ]];
     then
+      echo "Running the plain Jane benchmark. dirTestPath=${dirTestPath}, argUmount=${argUmount}, PWD=${PWD}"
       iozone -Raz -n 4 -f "${dirTestPath}/testfile" "${argUmount}" | tee iozone.out;
     else
       # test with ${intThreads} threads.
@@ -285,7 +308,7 @@ fi;
     echo "User opted out of generating new benchmark data.";
   fi;
 
-#
+#￼
 ###################################
 #
 # Generate the data directories and graphs
@@ -293,36 +316,47 @@ fi;
 # Do the stuff Generate_Graphs attempted to do, but do it smarter and better
 #
 
-for itemBenchmark in "${arrBenchmarks[@]}";
-do
-
   #################################
   #
-  ## Generate the individual report databases and
-  ## create the html raw data report using RedHatText fonts
+  ## Generate the individual report databases
   #
-  echo "dirIozoneBin=${dirIozoneBin}"
-  echo "Attempting to plot graph for ${itemBenchmark}"
-  echo "fileInput=${fileInput}"
-  ls -lh "${dirIozoneBin}/gengnuplot.sh"
-  echo "Pausing for 5 seconds..."
-  #sleep 5
-  "${dirIozoneBin}/gengnuplot.sh" "${fileInput}" ${itemBenchmark};
-  #"${dirIozoneBin}/Generate_Graphs" --input="${fileInput}";
-  
-  # ${itemBenchmark};
+  for itemBenchmark in "${arrBenchmarks[@]}";
+  do
+
+    ${cmdDbgEcho} "${LINENO}: dirIozoneBin=${dirIozoneBin}, Current benchmark=${itemBenchmark}"
+    echo "Plotting graph for ${itemBenchmark}..."
+    ${cmdDbgEcho} "fileInput=${fileInput}"
+    ls -lh "${dirIozoneBin}/gengnuplot.sh"
+    echo "${LINENO}Pausing for 5 seconds..."
+    sleep 5
+    "${dirIozoneBin}/gengnuplot.sh" "${fileInput}" ${itemBenchmark};
+    #"${dirIozoneBin}/Generate_Graphs" --input="${fileInput}";
+
+    # ${itemBenchmark};
+  done;..
   #
-  ## Isn't this a better way to do it? 
-  ## This concludes the stuff Generate_Graphs originally tried to do. That's 
-  ## only a small part of what is needed for a proper benchmark report and 
-  ## systems analysis.
+  ## Isn't this a better way to do it?
+  ## This concludes the stuff Generate_Graphs originally tried to do. That's
+  ## only a small part of what is needed for a proper benchmark report and
+  ## systems analysis.    if [[ -z "${intThreads}" ]];
+
   #
   # ###############################
-done;
+
 echo "running gnuplot"
 gnuplot "${dirIozoneBin}/gnu3d.dem"
 unset itemBenchmark;
 
+# percentage width for tables in grid
+perWidth=$(( 100 / ${intColumns} ));
+unset grdColumns;
+for intCounter in $(seq 1 ${intColumns} );
+do
+  ${cmdDbgEcho} "reticulating splines" >&2;
+  grdColumns+="1fr ";
+done;
+
+## create the html raw data report using RedHatText fonts
 for itemBenchmark in "${arrBenchmarks[@]}";
 do
   ######
@@ -340,24 +374,15 @@ do
   unset arrPerformance;
   declare -A arrPerformance;
   unset intCounter;
-  # percentage width for tables in grid
-  perWidth=$(( 100 / ${intColumns} ));
-  unset grdColumns;
-  for intCounter in $(seq 1 ${intColumns} );
-  do
-    ${cmdDbgEcho} "reticulating splines" >&2;
-    grdColumns+="1fr ";
-  done;
   
   
   #echo "${grdColumns} break"; sleep 9000;
   
   echo "Redirecting output to ${PWD}/${itemBenchmark}.html";
-  #_# stdout redirected to file for prod, to console for --debug
+  ${cmdDbgEcho} "stdout redirected to file for prod, to console for debug mode."
   ${cmdExec} 3>&1;
-  exec >"${itemBenchmark}.html";
-  echo -n '
-  <style>
+  ${cmdExec} >"${itemBenchmark}.html";
+  echo -n '<style>
   
   .grid-container {p
     display: grid;
@@ -365,7 +390,7 @@ do
     grid-template-columns: '; echo "${grdColumns}"';
     /* Creates rows with automatic height */
     grid-template-rows: auto auto;
-    gap: 10px; /* Adds spacing between items */
+    gap: 10px; /* Adds spacing between items */￼
   }
   
   .grid-container div {#
@@ -438,20 +463,20 @@ do
     then
       echo "</div>";
     fi;
-  
   done;
-  #_# redirect stdout back to the terminal
+  echo "</div>"
   ${cmdExec} 1>&3;
+  ${cmdExec} 3>&-
   popd;
-  echo "stdout redirected back to screen!";
-
+  ${cmdDbgEcho} "exec redirect to file should be terminated."
+  ${cmdDbgEcho} "stdout redirected back to screen!";
+done;
   ###################################
   ############################
   ####################
   #############
   ######
 
-done;
 
 #
 ###################################
@@ -459,10 +484,10 @@ done;
 # Now, generate the Completed graph and integrate the reports
 #
 
-# pandoc -f markdown_phpextra+raw_html ReportPage.md -t html -c ../styles/reportpage.css --pdf-engine=wkhtmltopdf \
-#  --pdf-engine-opt=--enable-local-file-access --pdf-engine-opt=--margin-top --pdf-engine-opt=0 --pdf-engine-opt=--margin-bottom \
-#  --pdf-engine-opt=0 --pdf-engine-opt=--margin-left --pdf-engine-opt=0 --pdf-engine-opt=--margin-right --pdf-engine-opt=0 \
-#  --pdf-engine-opt=--page-size --pdf-engine-opt=Letter -o reportpage.pdf
+pandoc -f markdown_phpextra+raw_html ReportPage.md -t html -c "${dirTemplates}/reportpage.css" --pdf-engine=wkhtmltopdf \
+  --pdf-engine-opt=--enable-local-file-access --pdf-engine-opt=--margin-top --pdf-engine-opt=0 --pdf-engine-opt=--margin-bottom \
+  --pdf-engine-opt=0 --pdf-engine-opt=--margin-left --pdf-engine-opt=0 --pdf-engine-opt=--margin-right --pdf-engine-opt=0 \
+  --pdf-engine-opt=--page-size --pdf-engine-opt=Letter -o "${dirWorking}reportpage.pdf"
 
 
 
