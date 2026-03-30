@@ -38,7 +38,11 @@ do
   arrBenchmarks+=("${itemBenchmark}");
 done;
 unset itemBenchmark;
-intColumns=4;
+
+## Default number of columns to render in raw data report pages:
+intColumns="4";
+## default number of rows of raw data tables in raw data report pages: 
+intRowsPerPage=3;
 
 echo "arrBenchmarks: [${arrBenchmarks[@]}]"
 #echo "Pausing for 5 seconds..."
@@ -120,6 +124,22 @@ fnCheckMount() {
 
 }
 
+fnSetupTemplates() {
+    if [[ -n "${fileInput}" || -n "${dirTestPath}" || -n "${dirMountPoint}" ]];
+    then
+      echo -e "${otagBold}${otagRed}ERROR: --setup-templates is to be run exclusively.${ctag}";
+      fnHelp;
+      exit 1;
+    else
+      mkdir {templates,styles};
+      cp -v "${dirIozone}/templates/*.md" "${dirWorking}/templates/";
+      cp -v "${dirIozone}/styles/*.css" "${dirWorking}/styles/";
+      echo "The base templates have been copied to ${dirWorking/templates}. For customized 
+      reports, edit the markdown files in ${dirWorking}/templates to add your analysis 
+      and recommendations.";
+      exit 0; 
+    fi;
+}
 
 #
 ###############################
@@ -131,7 +151,9 @@ do
                     exit 0;
                     ;;
     -c | "--columns"* ) if [[ "${1}" != *'='* ]]; then shift; fi;
-                    if [[ "$1" =~ ^[0-9]+$ ]]; then intColumns=$1; fi;
+                    intTemp="${1##*=}"
+                    if [[ "${intTemp}" =~ ^[0-9]+$ ]]; then intColumns=${intTemp}; fi;
+                    unset intTemp;
                     ;;
     -D | "--debug" )  optDebug=1;
                       cmdDbgRead="read";
@@ -152,6 +174,10 @@ do
                       dirTestPath="${1##*=}";
                       dirTestPath="${dirTestPath%/}";
                     ;;
+    -r | "--rows-per-page" ) if [[ "${1}" != *'='* ]]; then shift; fi;
+                      intTemp="${1##*=}";
+                      if [[ "${intTemp}" =~ ^[0-9]+$ ]]; then intRowsPerPage=${intTemp}; fi;
+                    ;;
     -s | "--skip-benchmark" ) optSkipBenchmark=1;
                     ;;
     -S | "--setup-templates" ) optSetupTemplates=1;
@@ -167,6 +193,9 @@ do
                     ;;
     -u | "--unmount" ) optUnmount=1;
                     ;;
+    -v | "--verbose" ) cmdDbgEcho="echo";
+                      ## We only want verbosity, not pauses changing of redirects
+                    ;;
     -w | "--working-dir"* ) if [[ "${1}" != *'='* ]]; then shift; fi; 
                       dirWorking="${1##*=}";
                       dirWorking="${dirWorking%/}";
@@ -181,76 +210,46 @@ do
 done;
 
 ###################################
-# Sanity checks
-#
+# Sanity checks    
 
-echo "checking arguments for sanity's sake";
-${cmdDbgEcho} "strIozone=${dirIozone}";
+  echo "checking arguments for sanity's sake";
+  ${cmdDbgEcho} "strIozone=${dirIozone}";
 
-echo "Command: ${cmdLine}";
-                        
-${cmdDbgEcho} "strIozoneBin=${dirIozoneBin}";
-${cmdDbgEcho} "fileInput=${fileInput}";
-${cmdDbgEcho} "dirWorking=${dirWorking}";
-${cmdDbgAnyKey};
-
-
-# Check and set $dirWorking sanely
-echo "dirWorking=${dirWorking} and PWD=${PWD}";
-if [[ "${dirWorking}" != "${PWD}" ]];
-then
-  if [ -d "${dirWorking}" ];
-  then
-    pushd "${dirWorking}";
-    ${cmdDebugEcho} "${LINENO}: Switched to ${PWD} which should be --working-dir=${dirWorking}";
-  else
-    echo "${otagBold}${otagRed}ERROR: the specified --working-dir [${dirWorking} ] does not exist.${ctag}";
-    echo "Command: ${cmdLine}";
-    exit 1;
-  fi;
-fi;
-
-# Verify the test path exists
-if [ -n "${dirTestPath}" ];
-then
-  if [ ! -d "${dirTestPath}" ];
-  then
-    echo "${otagBold}${otagRed}ERROR: the specified --test-path ${dirTestPath} does not exist. Check your command and try again.${ctag}";
-    echo "Command line: ${cmdLine}";
-    exit 1;
-  fi;
-else
-  dirTestPath="{PWD}";
-fi;
-
-# Advise user when # threads > # vCPUs
-if [[ "${intThreads}" -gt "$(nproc)" ]];
-then
-  echo "--threads=${intThreads} is greater than the number of threads $(nproc) that the number of CPUs this this system has.";
+  echo "Command: ${cmdLine}";
+                          
+  ${cmdDbgEcho} "strIozoneBin=${dirIozoneBin}";
+  ${cmdDbgEcho} "fileInput=${fileInput}";
+  ${cmdDbgEcho} "dirWorking=${dirWorking}";
   ${cmdDbgAnyKey};
-  for intCount in {05..01} ; 
-  do 
-    echo -n "${intCount}..."; 
-    sleep 12; 
-    echo -en "\b\b\b\b\b" ; 
-  done;
-  echo "...Continuing";
-fi;
-${cmdDbgAnyKey};
 
-if [[ -d "${dirWorking/templates}" ]];
-then
-  dirTemplates="${dirWorking}/templates";
-else
-  dirTemplates="${dirIozone}/templates";
-fi;
 
-if [[ -d "${dirWorking}/styles" ]]
-then
-  dirTemplates="${dirWorking}/styles";
-else
-  dirTemplates="${dirIozone}/styles";
-fi;
+  # Check and set $dirWorking sanely
+  echo "dirWorking=${dirWorking} and PWD=${PWD}";
+  if [[ "${dirWorking}" != "${PWD}" ]];
+  then
+    if [ -d "${dirWorking}" ];
+    then
+      pushd "${dirWorking}";
+      ${cmdDebugEcho} "${LINENO}: Switched to ${PWD} which should be --working-dir=${dirWorking}";
+    else
+      echo "${otagBold}${otagRed}ERROR: the specified --working-dir [${dirWorking} ] does not exist.${ctag}";
+      echo "Command: ${cmdLine}";
+      exit 1;
+    fi;
+  fi;
+
+  # Verify the test path exists
+  if [ -n "${dirTestPath}" ];
+  then
+    if [ ! -d "${dirTestPath}" ];
+    then
+      echo "${otagBold}${otagRed}ERROR: the specified --test-path ${dirTestPath} does not exist. Check your command and try again.${ctag}";
+      echo "Command line: ${cmdLine}";
+      exit 1;
+    fi;
+  else
+    dirTestPath="{PWD}";
+  fi;
 
 #
 ###################################
@@ -260,23 +259,44 @@ fi;
 ##  - copy original templates over 
 #
 
-
-  if [[ "${optSetupTemplates}" -eq 1 ]];
+  if [[ "${optSetupTemplates}" -eq 1 && ( -n "${fileInput}" || -n "${dirTestPath}" || -n "${dirMountPoint}" ) ]];
   then
-    if [[ -n "${fileInput}" || -n "${dirTestPath}" || -n "${dirMountPoint}" ]];
-    then
-      echo "${otagBold}${otagRed}ERROR: --setup-templates is to be run exclusively.${ctag}";
-      fnHelp;
-      exit 1;
-    else
-      mkdir templates;
-      cp -v "${dirIozone}/templates/*.md" "${dirWorking}/templates/";
-      echo "The base templates have been copied to ${dirWorking/templates}. For customized 
-      reports, edit the markdown files in ${dirWorking}/templates to add your analysis 
-      and recommendations.";
-      exit 0; 
-    fi;
+    fnSetupTemplates;
   fi;
+
+# Advise user when # threads > # vCPUs
+if [[ "${intThreads}" -gt "$(nproc)" ]];
+then
+    echo "--threads=${intThreads} is greater than the number of threads $(nproc) that the number of CPUs this this system has.";
+    ${cmdDbgAnyKey};
+    for intCount in {05..01} ; 
+    do 
+        echo -n "${intCount}..."; 
+        sleep 12; 
+        echo -en "\b\b\b\b\b" ; 
+    done;
+    echo "...Continuing";
+fi;
+${cmdDbgAnyKey};
+
+if [[ -d "${dirWorking/templates}" ]];
+then
+    dirTemplates="${dirWorking}/templates";
+else
+    dirTemplates="${dirIozone}/templates";
+fi;
+${cmdDbgEcho} "Line ${LINENO}: dirTemplates=${dirTemplates}";
+
+if [[ -d "${dirWorking}/styles" ]]
+then
+    dirStyles="${dirWorking}/styles";
+else
+    dirStyles="${dirIozone}/styles";
+fi;
+${cmdDbgEcho} "Line ${LINENO}: dirTemplates=${dirStyles}";
+
+
+
 
 #
 ###################################
@@ -285,27 +305,28 @@ fi;
 
   if [[ "${optUnmount}" -eq 1 ]];
    then 
-    fnCheckMount;￼
-    argUmount="-U ${dirMountPoint}";
+      fnCheckMount;￼
+      argUmount="-U ${dirMountPoint}";
   fi;
 
   if [[ "${optSkipBenchmark}" -ne 1 ]];
   then
-    if [[ -z "${intThreads}" ]];
-    then
-      echo "Running the plain Jane benchmark. dirTestPath=${dirTestPath}, argUmount=${argUmount}, PWD=${PWD}"
-      iozone -Raz -n 4 -f "${dirTestPath}/testfile" "${argUmount}" | tee iozone.out;
-    else
-      # test with ${intThreads} threads.
-      for item in $(seq 1 ${intThreads});
-      do
-        strTestFiles+=" ${dirTestPath}/testFile${item}";
-      done;
-      iozone -Rz -n 4 -F "${strTestFiles}" -t ${intThreads} "${argUmount}" | tee iozone.out;
-    fi;
-    echo "Results saved to ./iozone.out.";
+      if [[ -z "${intThreads}" ]];
+      then
+          echo "Running the plain Jane benchmark. dirTestPath=${dirTestPath}, argUmount=${argUmount}, PWD=${PWD}"
+          #_# iozone -Raz -n 4 -f "${dirTestPath}/testfile" "${argUmount}" | tee iozone.out;
+      else
+          # test with ${intThreads} threads.
+          for item in $(seq 1 ${intThreads});
+          do
+              strTestFiles+=" ${dirTestPath}/testFile${item}";
+          done;
+
+          #_# iozone -Rz -n 4 -F "${strTestFiles}" -t ${intThreads} "${argUmount}" | tee iozone.out;
+      fi;
+      echo "Results saved to ./iozone.out.";
   else
-    echo "User opted out of generating new benchmark data.";
+      echo "User opted out of generating new benchmark data.";
   fi;
 
 #￼
@@ -323,17 +344,16 @@ fi;
   for itemBenchmark in "${arrBenchmarks[@]}";
   do
 
-    ${cmdDbgEcho} "${LINENO}: dirIozoneBin=${dirIozoneBin}, Current benchmark=${itemBenchmark}"
+    ${cmdDbgEcho} "Line ${LINENO}: dirIozoneBin=${dirIozoneBin}, Current benchmark=${itemBenchmark}"
     echo "Plotting graph for ${itemBenchmark}..."
     ${cmdDbgEcho} "fileInput=${fileInput}"
-    ls -lh "${dirIozoneBin}/gengnuplot.sh"
-    echo "${LINENO}Pausing for 5 seconds..."
-    sleep 5
+    ls -lh "${dirIozoneBin}/gengnuplot.sh";
+    ${cmdDbgEcho} "Line ${LINENO}: Pausing for 1 seconds..."; sleep .1
     "${dirIozoneBin}/gengnuplot.sh" "${fileInput}" ${itemBenchmark};
     #"${dirIozoneBin}/Generate_Graphs" --input="${fileInput}";
 
     # ${itemBenchmark};
-  done;..
+  done;
   #
   ## Isn't this a better way to do it?
   ## This concludes the stuff Generate_Graphs originally tried to do. That's
@@ -352,91 +372,100 @@ perWidth=$(( 100 / ${intColumns} ));
 unset grdColumns;
 for intCounter in $(seq 1 ${intColumns} );
 do
-  ${cmdDbgEcho} "reticulating splines" >&2;
-  grdColumns+="1fr ";
+    ${cmdDbgEcho} "reticulating splines" >&2; sleep .3;
+    grdColumns+="1fr ";
 done;
 
 ## create the html raw data report using RedHatText fonts
 for itemBenchmark in "${arrBenchmarks[@]}";
 do
-  ######
-  #############
-  ####################
-  ############################
-  ###################################
-  # 
-  ## Make the performance reports
-  ## This is where the real work begins
-  ## 
-  
-  pushd "${itemBenchmark}";
+    ######
+    #############
+    ####################
+    ############################
+    ###################################
+    # 
+    ## Make the performance reports
+    ## This is where the real work begins
+    ## 
 
-  unset arrPerformance;
-  declare -A arrPerformance;
-  unset intCounter;
-  
-  
-  #echo "${grdColumns} break"; sleep 9000;
-  
-  echo "Redirecting output to ${PWD}/${itemBenchmark}.html";
-  ${cmdDbgEcho} "stdout redirected to file for prod, to console for debug mode."
-  ${cmdExec} 3>&1;
-  ${cmdExec} >"${itemBenchmark}.html";
-  echo -n '<style>
-  
-  .grid-container {p
-    display: grid;
-    /* Creates 3 columns of equal width (1fr unit) */
-    grid-template-columns: '; echo "${grdColumns}"';
-    /* Creates rows with automatic height */
-    grid-template-rows: auto auto;
-    gap: 10px; /* Adds spacing between items */￼
-  }
-  
-  .grid-container div {#
+    pushd "${itemBenchmark}";
+
+    unset arrPerformance;
+    declare -A arrPerformance;
+    unset intCounter;
 
 
+    intRowsTotal=$(( $(awk '$1 ~ /^[0-9]/ {print $1}' iozone_gen_out.gnuplot | uniq | wc -l) / ${intColumns} + ( $(awk '$1 ~ /^[0-9]/ {print $1}' iozone_gen_out.gnuplot | uniq | wc -l) % ${intColumns} > 0 ) ));
+    intPagesTotal=$(( ${intRowsTotal} / 3 + ( $intRowsTotal / 3 > 0 ) ));
+    intPageCurrent=1;
+    intRowCurrent=1;
+  
+    echo "Redirecting output to ${PWD}/${itemBenchmark}.html";
+    ${cmdDbgEcho} "stdout redirected to file for prod, to console for debug mode."
+    ${cmdExec} 3>&1;
+    ${cmdExec} >"${itemBenchmark}.html";
+    ${cmdDbgEcho} "Line ${LINENO}, Current benchmark=${itemBenchmark} currently in ${PWD}, intRowCurrent=${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing for 3 seconds..." >&3 ; sleep 3
+    echo -n '<style>
+    
+    .grid-container {
+      display: grid;  /* Creates 3 columns of equal width (1fr unit) */
+      grid-template-columns: repeat(${grdColumns});
+      /* Creates rows with automatic height */
+      grid-template-rows: auto auto;
+      gap: 10px; /* Adds spacing between items */￼
+    }
+    
+    .grid-container div {#
 
-    border: 1px solid #ccc;
-    padding: 8pt;
-    text-align: center;
-  }
-  
-  h1 {
-     font-size: 36pt;
-     font-family: "RedHatText-Bold", sans-serif;
-     margin-top: 0;
-  }
-  .tdtitle {
-    text-align: center;
-    font: small-caps 12pt "RedHatText-Bold", sans-serif;
-    margin-top: 0;
-    font-weight: bold; 
-  
-  .tdheading {
-    text-align: center;
-    font: small-caps 10pt "RedHatText-Bold", sans-serif;
-    margin-top: 0;
-    font-weight: bold;
-  }
-  
-  td.data {
-    text-align: center;
-    font-size: 10pt;
-    font-family: "RedHatText-Light", sans-serif;
-    margin-top: 0;
-    border-width: 0px 0px 1px 0px;
-    border-style: dashed;
-  }
-  </style>
-  
-  ';
-  
-  echo "<h1>Performance benchmark: ${itemBenchmark}, raw data.</h1>";
+
+
+      border: 1px solid #ccc;
+      padding: 8pt;
+      text-align: center;
+    }
+    
+    h1 {
+      font-size: 36pt;
+      font-family: "RedHatText-Bold", sans-serif;
+      margin-top: 0;
+    }
+    .tdtitle {
+      text-align: center;
+      font: small-caps 12pt "RedHatText-Bold", sans-serif;
+      margin-top: 0;
+      font-weight: bold; 
+    
+    .tdheading {
+      text-align: center;
+      font: small-caps 10pt "RedHatText-Bold", sans-serif;
+      margin-top: 0;
+      font-weight: bold;
+    }
+    
+    td.data {
+      text-align: center;
+      font-size: 10pt;
+      font-family: "RedHatText-Light", sans-serif;
+      margin-top: 0;
+      border-width: 0px 0px 1px 0px;
+      border-style: dashed;
+    }
+    </style>
+    
+    ';
+    ${cmdDbgEcho} "Line ${LINENO}, Current benchmark=${itemBenchmark} currently in ${PWD}, intRowCurrent=${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing for 3 seconds..." >&3 ; sleep 3
+
+
+      intNumGraphs="$(awk '$1 ~ /^[0-9]/ {print $1}' iozone_gen_out.gnuplot | uniq | wc -l)";
+      echo "<h1>Performance benchmark: ${itemBenchmark}, raw data page ${intPageCurrent}.</h1>";
+        echo "Line ${LINENO}" >&3
+
   for szFile in $(awk '$1 ~ /^[0-9]/ {print $1}' iozone_gen_out.gnuplot | uniq);
   do
-    ((intCounter++));
-    if [ $(( ${intCounter} % ${intColumns} )) = 1  ];
+    ${cmdDbgEcho} "Line ${LINENO}, Current benchmark=${itemBenchmark} currently in ${PWD}, intRowCurrent=${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing for 3 seconds..." >&3 ; sleep 3
+    ((intCountCharts++));
+    if [ $(( ${intCountCharts} % ${intColumns} )) = 1  ];
     then
       echo '<div class="grid-container">';
     fi;
@@ -450,8 +479,10 @@ do
         </tr>';
       for szRecord in $(awk -v szFile="${szFile}" '$1 == szFile {print $2}' iozone_gen_out.gnuplot);
       do
+    ${cmdDbgEcho} "Line ${LINENO}, Current benchmark=${itemBenchmark} currently in ${PWD}, intRowCurrent=${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing for 3 seconds..." >&3 ; sleep 3
         for intThroughput in $(awk -v szFile="${szFile}" -v szRecord="${szRecord}" '$1 == szFile && $2 == szRecord {print $3}' iozone_gen_out.gnuplot);
         do
+    ${cmdDbgEcho} "Line ${LINENO}, Current benchmark=${itemBenchmark} currently in ${PWD}, intRowCurrent=${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing for 3 seconds..." >&3 ; sleep 3
           echo -n '        <tr>
             <td class="data">'; printf "%'d" ${szRecord}; echo -n '</td><td class="data">'; printf "%'d" ${intThroughput}; echo '</td>
           </tr>';
@@ -459,17 +490,21 @@ do
       done;
       echo "    </table>
     </div>";
-    if [ $(( ${intCounter} % ${intColumns} )) = 0  ];
+    ${cmdDbgEcho} "Dividing ${intCounter} by ${intColumns}"
+    if [ $(( ${intCountCharts} % ${intColumns} )) = 0 ];
     then
       echo "</div>";
+    ${cmdDbgEcho} "Line ${LINENO}, Current benchmark=${itemBenchmark}, end of column, currently in ${PWD}, intRowCurrent=${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing for 3 seconds..." >&3 ; sleep 3
     fi;
   done;
   echo "</div>"
+    ${cmdDbgEcho} "Line ${LINENO}, Current benchmark=${itemBenchmark} currently in ${PWD}, intRowCurrent=${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing for 3 seconds..." >&3 ; sleep 3
   ${cmdExec} 1>&3;
   ${cmdExec} 3>&-
   popd;
   ${cmdDbgEcho} "exec redirect to file should be terminated."
   ${cmdDbgEcho} "stdout redirected back to screen!";
+    ${cmdDbgEcho} "Line ${LINENO}, Current benchmark=${itemBenchmark} currently in ${PWD}, intRowCurrent=${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing for 3 seconds..." >&3 ; sleep 3
 done;
   ###################################
   ############################
@@ -484,10 +519,10 @@ done;
 # Now, generate the Completed graph and integrate the reports
 #
 
-pandoc -f markdown_phpextra+raw_html ReportPage.md -t html -c "${dirTemplates}/reportpage.css" --pdf-engine=wkhtmltopdf \
-  --pdf-engine-opt=--enable-local-file-access --pdf-engine-opt=--margin-top --pdf-engine-opt=0 --pdf-engine-opt=--margin-bottom \
-  --pdf-engine-opt=0 --pdf-engine-opt=--margin-left --pdf-engine-opt=0 --pdf-engine-opt=--margin-right --pdf-engine-opt=0 \
-  --pdf-engine-opt=--page-size --pdf-engine-opt=Letter -o "${dirWorking}reportpage.pdf"
+# pandoc -f markdown_phpextra+raw_html ReportPage.md -t html -c "${dirTemplates}/reportpage.css" --pdf-engine=wkhtmltopdf \
+#  --pdf-engine-opt=--enable-local-file-access --pdf-engine-opt=--margin-top --pdf-engine-opt=0 --pdf-engine-opt=--margin-bottom \
+#  --pdf-engine-opt=0 --pdf-engine-opt=--margin-left --pdf-engine-opt=0 --pdf-engine-opt=--margin-right --pdf-engine-opt=0 \
+#  --pdf-engine-opt=--page-size --pdf-engine-opt=Letter -o "${dirWorking}reportpage.pdf"
 
 
 
@@ -501,5 +536,4 @@ if [[ "$(dirs -0)" != "${PWD}" ]];
 then
   popd;
 fi;
-
 
