@@ -44,8 +44,7 @@ intColumns="4";
 ## default number of rows of raw data tables in raw data report pages: 
 intRowsPerPage=3;
 
-echo "arrBenchmarks: [${arrBenchmarks[@]}]"
-#echo "Pausing for 5 seconds..."
+echo "Pausing for 5 seconds..."
 #sleep 5;
 
 if [ -e /etc/iozone.conf ];
@@ -493,8 +492,8 @@ do
             ${cmdDbgEcho} "Line ${LINENO}, ended row grid, benchmark=${itemCurrentBenchmark} intChartCounter==${intChartCounter} PWD=${PWD}, intRowCurrent==${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing..." >${devTTY} ; sleep ${intDebugDelay};
         fi;
         # <---<< End set of charts for ${itemBenchmark}
-        ${cmdDbgEcho} "Line ${LINENO}: About to test if intRowCurrent (${intRowCurrent}) == 3" >&3; sleep ${intDebugDelay};
-        if [[ ( ${intRowCurrent} -eq 3 && $(( ${intChartCounter} % ${intColumns} )) -eq 0 ) || ${intChartCounter} -eq ${#arrTestFiles[@]} ]];
+        ${cmdDbgEcho} "Line ${LINENO}: About to test if intRowCurrent (${intRowCurrent}) == ${intRowsPerPage}" >${devTTY}; sleep ${intDebugDelay};
+        if [[ ( ${intRowCurrent} -eq ${intRowsPerPage} && $(( ${intChartCounter} % ${intColumns} )) -eq 0 ) || ${intChartCounter} -eq ${#arrTestFiles[@]} ]];
         then
             #<----<< End of page
             echo "</div>"  ;
@@ -510,7 +509,7 @@ do
             ${cmdDbgEcho} "Line ${LINENO}: Incremented page: intPageCurrent==${intPageCurrent}" >${devTTY} ;
             intRowCurrent=1;
             ${cmdDbgEcho} "Line ${LINENO}: Reset row: intRowCurrent===${intRowCurrent}" >${devTTY} ;
-        elif [[ ( ${intRowCurrent} -lt 3 && $(( ${intChartCounter} % ${intColumns} )) -eq 0 ) ]];
+        elif [[ ( ${intRowCurrent} -lt ${intRowsPerPage} && $(( ${intChartCounter} % ${intColumns} )) -eq 0 ) ]];
         then
             ((++intRowCurrent));
             ${cmdDbgEcho} "Line ${LINENO}, ++++++Incrementing row++++++ itemCurrentBenchmark=${itemCurrentBenchmark}, PWD=${PWD}, szFile=${szFile} intChartCounter==${intChartCounter} intRowCurrent==${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing for ${intDebugDelay}..." >${devTTY} ; sleep ${intDebugDelay};
