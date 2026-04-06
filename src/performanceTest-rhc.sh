@@ -33,11 +33,11 @@ dirWorking="${PWD}";
 cmdLine="${0} ${@}";
 unset arrBenchmarks;
 declare -a arrBenchmarks;
-for itemBenchmark in write rewrite read reread randread randwrite bkwdread recrewrite strideread fwrite frewrite fread freread;
+for itemCurrentBenchmark in write rewrite read reread randread randwrite bkwdread recrewrite strideread fwrite frewrite fread freread;
 do
-  arrBenchmarks+=("${itemBenchmark}");
+  arrBenchmarks+=("${itemCurrentBenchmark}");
 done;
-unset itemBenchmark;
+unset itemCurrentBenchmark;
 
 ## Default number of columns to render in raw data report pages:
 intColumns="4";
@@ -63,6 +63,9 @@ optUnmount=0;
 fileInput="iozone.out"
 echo "id: $(id)"
 touch foo; ls -lh foo; rm foo;
+
+intDebugDelay="0.0005"
+devTTY=$(readlink -f /proc/$$/fd/1)
 
 ###############################
 #
@@ -321,7 +324,6 @@ ${cmdDbgEcho} "Line ${LINENO}: dirTemplates=${dirStyles}";
           do
               strTestFiles+=" ${dirTestPath}/testFile${item}";
           done;
-
           #_# iozone -Rz -n 4 -F "${strTestFiles}" -t ${intThreads} "${argUmount}" | tee iozone.out;
       fi;
       echo "Results saved to ./iozone.out.";
@@ -341,19 +343,19 @@ ${cmdDbgEcho} "Line ${LINENO}: dirTemplates=${dirStyles}";
   #
   ## Generate the individual report databases
   #
-  for itemBenchmark in "${arrBenchmarks[@]}";
-  do
+for itemCurrentBenchmark in "${arrBenchmarks[@]}";
+do
 
-    ${cmdDbgEcho} "Line ${LINENO}: dirIozoneBin=${dirIozoneBin}, Current benchmark=${itemBenchmark}"
-    echo "Plotting graph for ${itemBenchmark}..."
-    ${cmdDbgEcho} "fileInput=${fileInput}"
-    ls -lh "${dirIozoneBin}/gengnuplot.sh";
-    ${cmdDbgEcho} "Line ${LINENO}: Pausing for 1 seconds..."; sleep .1
-    "${dirIozoneBin}/gengnuplot.sh" "${fileInput}" ${itemBenchmark};
-    #"${dirIozoneBin}/Generate_Graphs" --input="${fileInput}";
+  ${cmdDbgEcho} "Line ${LINENO}: dirIozoneBin=${dirIozoneBin}, Current benchmark=${itemCurrentBenchmark}"
+  echo "Generating data for ${itemCurrentBenchmark}..."
+  ${cmdDbgEcho} "fileInput=${fileInput}"
+  ${cmdDbgEcho} $(ls -lh "${dirIozoneBin}/gengnuplot.sh");
+  ${cmdDbgEcho} "Line ${LINENO}: Pausing for 1 seconds..."; sleep .1
+  "${dirIozoneBin}/gengnuplot.sh" "${fileInput}" ${itemCurrentBenchmark};
+  #"${dirIozoneBin}/Generate_Graphs" --input="${fileInput}";
 
-    # ${itemBenchmark};
-  done;
+  # ${itemCurrentBenchmark};
+done;
   #
   ## Isn't this a better way to do it?
   ## This concludes the stuff Generate_Graphs originally tried to do. That's
@@ -363,172 +365,162 @@ ${cmdDbgEcho} "Line ${LINENO}: dirTemplates=${dirStyles}";
   #
   # ###############################
 
-echo "running gnuplot"
+echo "Generating charts..."
 gnuplot "${dirIozoneBin}/gnu3d.dem"
-unset itemBenchmark;
+unset itemCurrentBenchmark;
 
 # percentage width for tables in grid
 perWidth=$(( 100 / ${intColumns} ));
-unset grdColumns;
-for intCounter in $(seq 1 ${intColumns} );
+
+
+# >>>---> Start new set of charts for ${itemBenchmark}
+for itemCurrentBenchmark in "${arrBenchmarks[@]}"; # >>>---> Start new set of data dumps for each benchmark 
 do
-    ${cmdDbgEcho} "reticulating splines" >&2; sleep .3;
-    grdColumns+="1fr ";
-done;
+  pushd "${itemCurrentBenchmark}" >/dev/null 2>&1 ;
+  ${cmdDbgEcho} "Beginning raw data report for benchmark ${itemCurrentBenchmark}";
+  #sleep 10;
+  intRowsTotal=$(( $(awk '$1 ~ /^[0-9]/ {print $1}' iozone_gen_out.gnuplot | uniq | wc -l) / ${intColumns} + ( $(awk '$1 ~ /^[0-9]/ {print $1}' iozone_gen_out.gnuplot | uniq | wc -l) % ${intColumns} > 0 ) ));
+  intPagesTotal=$(( ${intRowsTotal} / 3 + ( $intRowsTotal / 3 > 0 ) ));
+  intPageCurrent=1;
+  intRowCurrent=1;
+  intChartCounter=1;
 
-## create the html raw data report using RedHatText fonts
-for itemBenchmark in "${arrBenchmarks[@]}";
-do
-    ######
-    #############
-    ####################
-    ############################
-    ###################################
-    # 
-    ## Make the performance reports
-    ## This is where the real work begins
-    ## 
-
-    pushd "${itemBenchmark}";
-
-    unset arrPerformance;
-    declare -A arrPerformance;
-    unset intCounter;
-
-
-    intRowsTotal=$(( $(awk '$1 ~ /^[0-9]/ {print $1}' iozone_gen_out.gnuplot | uniq | wc -l) / ${intColumns} + ( $(awk '$1 ~ /^[0-9]/ {print $1}' iozone_gen_out.gnuplot | uniq | wc -l) % ${intColumns} > 0 ) ));
-    intPagesTotal=$(( ${intRowsTotal} / 3 + ( $intRowsTotal / 3 > 0 ) ));
-    intPageCurrent=1;
-    intRowCurrent=1;
+    unset item szFile arrTestFiles;
+    declare -a szFile arrTestFiles;
   
-    echo "Redirecting output to ${PWD}/${itemBenchmark}.html";
-    ${cmdDbgEcho} "stdout redirected to file for prod, to console for debug mode."
-    ${cmdExec} 3>&1;
-    ${cmdExec} >"${itemBenchmark}.html";
-    ${cmdDbgEcho} "Line ${LINENO}, Current benchmark=${itemBenchmark} currently in ${PWD}, intRowCurrent=${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing for 3 seconds..." >&3 ; sleep 3
-    echo -n '<style>
-    
-    .grid-container {
-      display: grid;  /* Creates 3 columns of equal width (1fr unit) */
-      grid-template-columns: repeat(${grdColumns});
-      /* Creates rows with automatic height */
-      grid-template-rows: auto auto;
-      gap: 10px; /* Adds spacing between items */￼
-    }
-    
-    .grid-container div {#
+    # Load array szFile with file sizes for ${itemCurrentBenchmark}
+    for item in $(awk '$1 ~ /^[0-9]/ {print $1}' iozone_gen_out.gnuplot | uniq);
+    do
+        arrTestFiles+=("${item}");
+    done; unset item;
+
+    ${cmdDbgEcho} "Line ${LINENO}, benchmark=${itemCurrentBenchmark} in ${PWD}, intChartCounter==${intChartCounter}, intRowCurrent=${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing for ${intDebugDelay} seconds..." >${devTTY}; sleep ${intDebugDelay};
 
 
 
-      border: 1px solid #ccc;
-      padding: 8pt;
-      text-align: center;
-    }
-    
-    h1 {
-      font-size: 36pt;
-      font-family: "RedHatText-Bold", sans-serif;
-      margin-top: 0;
-    }
-    .tdtitle {
-      text-align: center;
-      font: small-caps 12pt "RedHatText-Bold", sans-serif;
-      margin-top: 0;
-      font-weight: bold; 
-    
-    .tdheading {
-      text-align: center;
-      font: small-caps 10pt "RedHatText-Bold", sans-serif;
-      margin-top: 0;
-      font-weight: bold;
-    }
-    
-    td.data {
-      text-align: center;
-      font-size: 10pt;
-      font-family: "RedHatText-Light", sans-serif;
-      margin-top: 0;
-      border-width: 0px 0px 1px 0px;
-      border-style: dashed;
-    }
-    </style>
-    
-    ';
-    ${cmdDbgEcho} "Line ${LINENO}, Current benchmark=${itemBenchmark} currently in ${PWD}, intRowCurrent=${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing for 3 seconds..." >&3 ; sleep 3
-
-
-      intNumGraphs="$(awk '$1 ~ /^[0-9]/ {print $1}' iozone_gen_out.gnuplot | uniq | wc -l)";
-      echo "<h1>Performance benchmark: ${itemBenchmark}, raw data page ${intPageCurrent}.</h1>";
-        echo "Line ${LINENO}" >&3
-
-  for szFile in $(awk '$1 ~ /^[0-9]/ {print $1}' iozone_gen_out.gnuplot | uniq);
-  do
-    ${cmdDbgEcho} "Line ${LINENO}, Current benchmark=${itemBenchmark} currently in ${PWD}, intRowCurrent=${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing for 3 seconds..." >&3 ; sleep 3
-    ((intCountCharts++));
-    if [ $(( ${intCountCharts} % ${intColumns} )) = 1  ];
-    then
-      echo '<div class="grid-container">';
-    fi;
-      echo '  <div>';
-      echo '    <table>
+    # >>---> Start new chart per file size in ${itemCurrentBenchmark) data file
+    for szFile in "${arrTestFiles[@]}";
+    do
+        ${cmdDbgEcho} "Line ${LINENO}: <--> back to for szFile in arrTestFiles...  |---| Checking if row 1, column 1: ---Row ${intRowCurrent}---, ||| Column $(( ${intChartCounter} % ${intColumns} )) ||| " >${devTTY}; sleep ${intDebugDelay}
+        ${cmdDbgEcho} "Line ${LINENO}: Current page ##### [[[[ ${intPageCurrent} ]]]]  ##### ---Row ${intRowCurrent}---, ||| Column $(( ${intChartCounter} % ${intColumns} +1  )) ||| Chart Number ${intChartCounter}" >${devTTY};
+        if [[ ${intChartCounter} -eq 1 || ( ${intRowCurrent} -eq 1 && $(( ${intChartCounter} % ${intColumns} )) -eq 1 ) ]];
+        then
+            ${cmdDbgEcho} "Line ${LINENO}, checking directory, currently ${PWD} and should be ${dirWorking}/${itemBenchmark} pausing for ${intDebugDelay} seconds..." >${devTTY}; sleep ${intDebugDelay};
+            if [[ ! "${dirWorking}/${itemCurrentBenchmark}" == "${PWD}" ]];
+            then
+              pushd "${itemCurrentBenchmark}" >/dev/null 2>&1;
+              ${cmdDbgEcho} "Line ${LINENO}: ^^^^^^^^^checking directory after pushd'ing, currently ${PWD} and should be ${dirWorking}/${itemBenchmark} pausing for ${intDebugDelay} seconds..." ; sleep ${intDebugDelay};
+            fi;
+            echo "Generating ${PWD}/${itemCurrentBenchmark}_page${intPageCurrent}.html";
+            exec 3>&1 ;
+            exec > "${itemCurrentBenchmark}_page${intPageCurrent}.html";
+            ${cmdDbgEcho} "Line ${LINENO}: stdout redirected to file for prod, to console for debug mode." >${devTTY}
+            ${cmdDbgEcho} "Line ${LINENO}, benchmark=${itemCurrentBenchmark} in ${PWD}, intChartCounter==${intChartCounter}, intRowCurrent==${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing for ${intDebugDelay} seconds..."  >${devTTY} ; sleep ${intDebugDelay};
+            echo -n '<style>
+            .grid-container {
+            display: grid;  /* Creates 3 columns of equal width (1fr unit) */
+            grid-template-columns: repeat('${intColumns}', 1fr); /* Creates rows with automatic height */
+            grid-template-rows: auto auto;
+            gap: 10px; /* Adds spacing between items */￼
+            }
+            .grid-container div {
+            border: 1px solid #ccc;
+            padding: 8pt;
+            text-align: center;
+            }
+            h1 {
+            font-size: 36pt;
+            font-family: "RedHatText-Bold", sans-serif;
+            margin-top: 0;
+            }
+            .tdtitle {
+            text-align: center;
+            font: small-caps 12pt "RedHatText-Bold", sans-serif;
+            margin-top: 0;
+            font-weight: bold; 
+            }
+            .tdheading {
+            text-align: center;
+            font: small-caps 10pt "RedHatText-Bold", sans-serif;
+            margin-top: 0;
+            font-weight: bold;
+            }    
+            td.data {
+            text-align: center;
+            font-size: 10pt;
+            font-family: "RedHatText-Light", sans-serif;
+            margin-top: 0;
+            border-width: 0px 0px 1px 0px;
+            border-style: dashed;
+            }
+            </style>
+            ';
+            echo "<h1>Performance benchmark: ${itemCurrentBenchmark}, raw data page ${intPageCurrent}.</h1>";
+        fi;
+        if [[ $(( ${intChartCounter} % ${intColumns} )) -eq 1  ]];
+        then
+            echo '<div class="grid-container">';
+        fi;
+        # <---<< If we're not starting a new page, this stanza was skipped
+        ${cmdDbgEcho} "Line ${LINENO}: itemCurrentBenchmark=${itemCurrentBenchmark}, PWD=${PWD}, szFile=${szFile} intRowCurrent==${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing for ${intDebugDelay}..." >${devTTY} ; sleep ${intDebugDelay};
+        ${cmdDbgEcho} "Line ${LINENO}: [ page ${intPageCurrent} ] ---Row ${intRowCurrent}--- ||| Column $(( ${intChartCounter} % ${intColumns} )) ||| {{ chart number ${intChartCounter} }}" >${devTTY}; sleep ${intDebugDelay}
+        echo '<div><table>
         <tr>
-          <td class="tdtitle" colspan=2>File size: '; printf "%'d" ${szFile}; echo ' kB</td>
+            <td class="tdtitle" colspan=2>File size: '; printf "%'d" ${szFile}; echo ' kB Table Number: '${intChartCounter}'</td>
         </tr>
         <tr>
-         <td class="tdheading">Record Size(kB)</td><td class="tdheading">Throughput(kB/s)</td>
+        <td class="tdheading">Record Size(kB)</td><td class="tdheading">Throughput(kB/s)</td>
         </tr>';
-      for szRecord in $(awk -v szFile="${szFile}" '$1 == szFile {print $2}' iozone_gen_out.gnuplot);
-      do
-    ${cmdDbgEcho} "Line ${LINENO}, Current benchmark=${itemBenchmark} currently in ${PWD}, intRowCurrent=${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing for 3 seconds..." >&3 ; sleep 3
-        for intThroughput in $(awk -v szFile="${szFile}" -v szRecord="${szRecord}" '$1 == szFile && $2 == szRecord {print $3}' iozone_gen_out.gnuplot);
+        # >>>---> New row per request size (szFile) per file size (szRequest)
+        for szRequest in $(awk -v szFile="${szFile}" '$1 == szFile {print $2}' iozone_gen_out.gnuplot); 
         do
-    ${cmdDbgEcho} "Line ${LINENO}, Current benchmark=${itemBenchmark} currently in ${PWD}, intRowCurrent=${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing for 3 seconds..." >&3 ; sleep 3
-          echo -n '        <tr>
-            <td class="data">'; printf "%'d" ${szRecord}; echo -n '</td><td class="data">'; printf "%'d" ${intThroughput}; echo '</td>
-          </tr>';
+            for intThroughput in $(awk -v szFile="${szFile}" -v szRequest="${szRequest}" '$1 == szFile && $2 == szRequest {print $3}' iozone_gen_out.gnuplot);
+            do
+            echo -n '        <tr>
+                <td class="data">'; printf "%'d" ${szRequest}; echo -n '</td><td class="data">'; printf "%'d" ${intThroughput}; echo '</td>
+                </tr>';
+            done;
         done;
-      done;
-      echo "    </table>
-    </div>";
-    ${cmdDbgEcho} "Dividing ${intCounter} by ${intColumns}"
-    if [ $(( ${intCountCharts} % ${intColumns} )) = 0 ];
-    then
-      echo "</div>";
-    ${cmdDbgEcho} "Line ${LINENO}, Current benchmark=${itemBenchmark}, end of column, currently in ${PWD}, intRowCurrent=${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing for 3 seconds..." >&3 ; sleep 3
-    fi;
-  done;
-  echo "</div>"
-    ${cmdDbgEcho} "Line ${LINENO}, Current benchmark=${itemBenchmark} currently in ${PWD}, intRowCurrent=${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing for 3 seconds..." >&3 ; sleep 3
-  ${cmdExec} 1>&3;
-  ${cmdExec} 3>&-
-  popd;
-  ${cmdDbgEcho} "exec redirect to file should be terminated."
-  ${cmdDbgEcho} "stdout redirected back to screen!";
-    ${cmdDbgEcho} "Line ${LINENO}, Current benchmark=${itemBenchmark} currently in ${PWD}, intRowCurrent=${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing for 3 seconds..." >&3 ; sleep 3
+        ${cmdDbgEcho} "Line ${LINENO}, ending table, itemCurrentBenchmark=${itemCurrentBenchmark}, PWD=${PWD}, intChartCounter==${intChartCounter} szFile=${szFile} intRowCurrent==${intRowCurrent}, intPageCurrent=${intPageCurrent}..." >${devTTY} ;
+        # <---<< End table
+        echo "    </table>
+        </div>";
+        ${cmdDbgEcho} "intChartCounter == 18, ${intChartCounter} % ${intColumns} == $(( ${intChartCounter} % ${intColumns} )), #arrTestFiles == ${#arrTestFiles[@]}" >${devTTY};
+        #>>>----> Close row grid if this is the ${intColumns} column or if we are at the last chart for this benchmark.
+        if [[ $(( ${intChartCounter} % ${intColumns} )) -eq 0 || "${intChartCounter}" -eq "${#arrTestFiles[@]}" ]];
+        then
+            echo "</div>";
+            ${cmdDbgEcho} "Line ${LINENO}, ended row grid, benchmark=${itemCurrentBenchmark} intChartCounter==${intChartCounter} PWD=${PWD}, intRowCurrent==${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing..." >${devTTY} ; sleep ${intDebugDelay};
+        fi;
+        # <---<< End set of charts for ${itemBenchmark}
+        ${cmdDbgEcho} "Line ${LINENO}: About to test if intRowCurrent (${intRowCurrent}) == 3" >&3; sleep ${intDebugDelay};
+        if [[ ( ${intRowCurrent} -eq 3 && $(( ${intChartCounter} % ${intColumns} )) -eq 0 ) || ${intChartCounter} -eq ${#arrTestFiles[@]} ]];
+        then
+            #<----<< End of page
+            echo "</div>"  ;
+            ${cmdDbgEcho} "Line ${LINENO}: ended page, benchmark=${itemCurrentBenchmark} PWD=${PWD}, intChartCounter==${intChartCounter} intRowCurrent==${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing..." >${devTTY} ; sleep ${intDebugDelay};
+            exec 1>&3;
+            exec 3>&-;
+            ${cmdDbgEcho} "Line ${LINENO}: -->| exec redirect to file should be terminated." >${devTTY} ;
+            ${cmdDbgEcho} "Line ${LINENO}: >>>[ ] stdout redirected back to screen!" >${devTTY} ;
+            ${cmdDbgEcho} "Line ${LINENO}: about to popd; PWD=${PWD}"
+            popd >/dev/null 2>&1;
+            ${cmdDbgEcho} "Line ${LINENO}: just popd'd: PWD=${PWD}"
+            ((intPageCurrent++));
+            ${cmdDbgEcho} "Line ${LINENO}: Incremented page: intPageCurrent==${intPageCurrent}" >${devTTY} ;
+            intRowCurrent=1;
+            ${cmdDbgEcho} "Line ${LINENO}: Reset row: intRowCurrent===${intRowCurrent}" >${devTTY} ;
+        elif [[ ( ${intRowCurrent} -lt 3 && $(( ${intChartCounter} % ${intColumns} )) -eq 0 ) ]];
+        then
+            ((++intRowCurrent));
+            ${cmdDbgEcho} "Line ${LINENO}, ++++++Incrementing row++++++ itemCurrentBenchmark=${itemCurrentBenchmark}, PWD=${PWD}, szFile=${szFile} intChartCounter==${intChartCounter} intRowCurrent==${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing for ${intDebugDelay}..." >${devTTY} ; sleep ${intDebugDelay};
+        fi;
+        ((++intChartCounter));
+        ${cmdDbgEcho} "Line ${LINENO}, --<**((boing))**>-- itemCurrentBenchmark=${itemCurrentBenchmark}, PWD=${PWD}, szFile=${szFile} intChartCounter=${intChartCounter} intRowCurrent==${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing for ${intDebugDelay}..." >${devTTY} ; sleep ${intDebugDelay};
+    done;
+    ${cmdDbgEcho} "Line ${LINENO},  --<**((boing))**>-- itemCurrentBenchmark=${itemCurrentBenchmark}, PWD=${PWD}, szFile=${szFile} intChartCounter=${intChartCounter} intRowCurrent==${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing for ${intDebugDelay}..." >${devTTY} ; sleep ${intDebugDelay};
 done;
-  ###################################
-  ############################
-  ####################
-  #############
-  ######
-
-
-#
-###################################
-#
-# Now, generate the Completed graph and integrate the reports
-#
-
-# pandoc -f markdown_phpextra+raw_html ReportPage.md -t html -c "${dirTemplates}/reportpage.css" --pdf-engine=wkhtmltopdf \
-#  --pdf-engine-opt=--enable-local-file-access --pdf-engine-opt=--margin-top --pdf-engine-opt=0 --pdf-engine-opt=--margin-bottom \
-#  --pdf-engine-opt=0 --pdf-engine-opt=--margin-left --pdf-engine-opt=0 --pdf-engine-opt=--margin-right --pdf-engine-opt=0 \
-#  --pdf-engine-opt=--page-size --pdf-engine-opt=Letter -o "${dirWorking}reportpage.pdf"
-
-
-
-#
-#
-##########################
+${cmdDbgEcho} "Line ${LINENO}, itemCurrentBenchmark=${itemCurrentBenchmark}, PWD=${PWD}, szFile=${szFile} intChartCounter==${intChartCounter} intRowCurrent==${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing for ${intDebugDelay}..." >${devTTY} ; sleep ${intDebugDelay};
 
 
 
