@@ -33,7 +33,7 @@ dirWorking="${PWD}";
 cmdLine="${0} ${@}";
 unset arrBenchmarks;
 declare -a arrBenchmarks;
-for itemCurrentBenchmark in write rewrite read reread randread randwrite bkwdread recrewrite strideread fwrite frewrite fread freread;
+for itemCurrentBenchmark in read write rewrite reread randread randwrite bkwdread recrewrite strideread fwrite frewrite fread freread;
 do
   arrBenchmarks+=("${itemCurrentBenchmark}");
 done;
@@ -176,7 +176,10 @@ do
                       dirTestPath="${1##*=}";
                       dirTestPath="${dirTestPath%/}";
                     ;;
-    -r | "--rows-per-page" ) if [[ "${1}" != *'='* ]]; then shift; fi;
+    -r | "--report" ) if [[ "${1}" != *'='* ]]; then shift; fi;
+                      strReportName="${1##=}";
+                    ;;
+    -R | "--rows-per-page" ) if [[ "${1}" != *'='* ]]; then shift; fi;
                       intTemp="${1##*=}";
                       if [[ "${intTemp}" =~ ^[0-9]+$ ]]; then intRowsPerPage=${intTemp}; fi;
                     ;;
@@ -346,6 +349,7 @@ for itemCurrentBenchmark in "${arrBenchmarks[@]}";
 do
 
   ${cmdDbgEcho} "Line ${LINENO}: dirIozoneBin=${dirIozoneBin}, Current benchmark=${itemCurrentBenchmark}"
+
   echo "Generating data for ${itemCurrentBenchmark}..."
   ${cmdDbgEcho} "fileInput=${fileInput}"
   ${cmdDbgEcho} $(ls -lh "${dirIozoneBin}/gengnuplot.sh");
@@ -451,6 +455,7 @@ do
             margin-top: 0;
             border-width: 0px 0px 1px 0px;
             border-style: dashed;
+
             }
             </style>
             ';
@@ -519,12 +524,84 @@ do
     done;
     ${cmdDbgEcho} "Line ${LINENO},  --<**((boing))**>-- itemCurrentBenchmark=${itemCurrentBenchmark}, PWD=${PWD}, szFile=${szFile} intChartCounter=${intChartCounter} intRowCurrent==${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing for ${intDebugDelay}..." >${devTTY} ; sleep ${intDebugDelay};
 done;
+
+unset itemCurrentBenchmark tmpReportSource;
 ${cmdDbgEcho} "Line ${LINENO}, itemCurrentBenchmark=${itemCurrentBenchmark}, PWD=${PWD}, szFile=${szFile} intChartCounter==${intChartCounter} intRowCurrent==${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing for ${intDebugDelay}..." >${devTTY} ; sleep ${intDebugDelay};
-
-
 
 if [[ "$(dirs -0)" != "${PWD}" ]];
 then
   popd;
 fi;
 
+if [[ ! "${PWD}" == "${dirWorking}" ]];
+then
+  cd "${dirWorking}";
+fi;
+
+unset bTemplates;
+if [[ -n ${strReportName} ]];
+then
+  ## Build PDF
+  # First, check whether we have a templates directory we can modify.
+  if [[ "${dirTemplates}" == "${dirIozone}/templates" && ! -d "${dirWorking}/templates" ]];
+  then
+    echo "Attention! Copying ${dirIozone}/templates to ${dirWorking}";
+    cp -ar "${dirIozone}/templates" "${dirWorking}/";
+    bTemplates=1;
+    dirTemplates_bak="${dirTemplates}";
+    dirTemplates="${dirWorking}/templates";
+  fi;
+
+  sed -i "s|dirWorking|${dirWorking}\/templates|g" "templates/"*".md"
+
+  echo "${LINENO} building PDFs"
+  declare -a itemCurrentBenchmark;
+
+  pandoc -f markdown_phpextra+raw_html "${dirTemplates}/coversheet.md" -t html -c "${dirStyles}/reportpage.css" --pdf-engine=wkhtmltopdf --pdf-engine-opt=--enable-local-file-access --pdf-engine-opt=--margin-top --pdf-engine-opt=0 --pdf-engine-opt=--margin-bottom --pdf-engine-opt=0 --pdf-engine-opt=--margin-left --pdf-engine-opt=0 --pdf-engine-opt=--margin-right --pdf-engine-opt=0 --pdf-engine-opt=--page-size --pdf-engine-opt=Letter -o "coversheet.pdf"
+
+  for strFile in "${dirTemplates}/{performance-testing.md,ReportPage.md}";
+  do
+    echo "strFile value: [ ${strFile} ]";
+    pandoc -f markdown_phpextra+raw_html "${strFile}" -t html -c "styles/reportpage.css" --pdf-engine=wkhtmltopdf --pdf-engine-opt=--enable-local-file-access --pdf-engine-opt=--margin-top --pdf-engine-opt=0 --pdf-engine-opt=--margin-bottom --pdf-engine-opt=0 --pdf-engine-opt=--margin-left --pdf-engine-opt=0 --pdf-engine-opt=--margin-right --pdf-engine-opt=0 --pdf-engine-opt=--page-size --pdf-engine-opt=Letter -o "${strFile%.*}.pdf";
+  done;
+
+  for itemBenchmark in "${arrBenchmarks[@]}";
+  do
+      echo "${LINENO} working on ${itemBenchmark} PDFs..."
+    if [ -f "${dirTemplates}/${itemBenchmark}.md" ]
+      then
+        pandoc -f markdown_phpextra+raw_html "${dirTemplates}/${itemBenchmark}.md" -t html -c "${dirStyles}/reportpage.css" --pdf-engine=wkhtmltopdf --pdf-engine-opt=--enable-local-file-access --pdf-engine-opt=--margin-top --pdf-engine-opt=0 --pdf-engine-opt=--margin-bottom --pdf-engine-opt=0 --pdf-engine-opt=--margin-left --pdf-engine-opt=0 --pdf-engine-opt=--margin-right --pdf-engine-opt=0 --pdf-engine-opt=--page-size --pdf-engine-opt=Letter -o "${itemBenchmark}.pdf";
+    fi;
+
+    echo "${LINENO}: checking on ${itemBenchmark}"
+    ls "${itemBenchmark}/${itemBenchmark}"_page*.html
+    for tmpReportSource in "${itemBenchmark}/${itemBenchmark}"_page*.html;
+    do
+        echo "${LINENO} working on ${tmpReportSource}"
+        ls -lh "${tmpReportSource}"
+        pandoc -f markdown_phpextra+raw_html "${tmpReportSource}" -t html -c "${dirStyles}/reportpage.css" --pdf-engine=wkhtmltopdf --pdf-engine-opt=--enable-local-file-access --pdf-engine-opt=--margin-top --pdf-engine-opt=0 --pdf-engine-opt=--margin-bottom --pdf-engine-opt=0 --pdf-engine-opt=--margin-left --pdf-engine-opt=0 --pdf-engine-opt=--margin-right --pdf-engine-opt=0 --pdf-engine-opt=--page-size --pdf-engine-opt=Letter -o "$(basename ${tmpReportSource%.*}.pdf)";
+    done;
+
+  done;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+fi;
