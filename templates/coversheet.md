@@ -84,7 +84,7 @@ td {
 </colgroup>
 <!-- This table should be below/after the graphics at the top of the background/watermark. -->
 <tr>
-    <td><img src="file://%dirIozone%/img/RedHat-Speedo.svg" class="logo" /></td>
+    <td><img src="file://dirIozone/img/RedHat-Speedo.svg" class="logo" /></td>
     <td style="text-align: right; font-weight: bold;">
       <h1>Storage Benchmark Testing</h1>
       <h2>Red Hat Consulting</h2>
