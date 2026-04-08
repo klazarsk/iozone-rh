@@ -15,7 +15,7 @@ html {
     padding: 0;
     width: 100%;
     /* Forced scaling to ensure it hits all edges */
-    background-image: url("file:////home/klazarsk/github/iozone/img/RH_Consulting_header_2700x750_grey.png"); 
+    background-image: url("file://dirIozone/img/RH_Consulting_header_2700x750_grey.png"); 
     background-position: center top;
     background-repeat: no-repeat;
     background-size: 100%;

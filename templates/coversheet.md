@@ -15,7 +15,7 @@ html {
     padding: 0;
     height: 100%;
     /* Forced scaling to ensure it hits all edges */
-    background-image: url("file:///%dirIozone%/img/redhatConsulting.svg"); 
+    background-image: url("file://dirIozone/img/redhatConsulting.svg"); 
     background-position: center center;
     background-repeat: no-repeat;
     background-size: 100% 100%;
