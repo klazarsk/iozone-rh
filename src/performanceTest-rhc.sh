@@ -31,6 +31,7 @@
 dirWorking="${PWD}";
 # get the command line with arguments
 cmdLine="${0} ${@}";
+optGarbageCollection=0
 unset arrBenchmarks;
 declare -a arrBenchmarks;
 for itemCurrentBenchmark in read write rewrite reread randread randwrite bkwdread recrewrite strideread fwrite frewrite fread freread;
@@ -38,7 +39,6 @@ do
   arrBenchmarks+=("${itemCurrentBenchmark}");
 done;
 unset itemCurrentBenchmark;
-
 ## Default number of columns to render in raw data report pages:
 intColumns="4";
 ## default number of rows of raw data tables in raw data report pages: 
@@ -97,7 +97,57 @@ cmdExec="exec";
 
 fnHelp() {
   # This is the help screen
-  echo "This will be a help screen. Honest!";
+  echo 'This will be a help screen. Honest!";
+
+    -h | --help
+
+        Display this DoublePlusUnHelpful help screen
+
+    -c | --columns [ integer ]
+
+        Specify the number of columns on the benchmark raw data pages.
+        Default = 4.
+
+    -g | --garbage-collection
+
+        Have the utility clean up generated html and pdf files.
+
+    -D | --debug
+
+        Enable full verbose mode (debug messages) and debug pauses
+
+    -i | --input
+
+    -m | --mountpoint
+
+    -p | "--test-path"*
+
+    -r | "--report"*
+
+    -R | "--rows-per-page"*
+
+    -s | "--skip-benchmark"
+
+    -S | "--setup-templates"
+
+
+    -t | "--threads"* [intger]
+
+
+
+    -u | "--unmount"
+
+        Unmount the --test-path after running the benchmark
+
+    -v | --verbose
+
+        This will enable verbose mode which displays most debug notices but does
+        not turn on debug pauses
+
+    -w | "--working-dir"*
+
+        Path where you have the templates, img, styles directories temp files
+'
 }
 
 fnCheckMount() {
@@ -157,6 +207,8 @@ do
                     if [[ "${intTemp}" =~ ^[0-9]+$ ]]; then intColumns=${intTemp}; fi;
                     unset intTemp;
                     ;;
+    -g | "--garbage-collection" ) optGarbageCollection=1;
+                    ;;
     -D | "--debug" )  optDebug=1;
                       cmdDbgRead="read";
                       cmdDbgSleep="sleep";
@@ -176,10 +228,10 @@ do
                       dirTestPath="${1##*=}";
                       dirTestPath="${dirTestPath%/}";
                     ;;
-    -r | "--report" ) if [[ "${1}" != *'='* ]]; then shift; fi;
+    -r | "--report"* ) if [[ "${1}" != *'='* ]]; then shift; fi;
                       strReportName="${1##=}";
                     ;;
-    -R | "--rows-per-page" ) if [[ "${1}" != *'='* ]]; then shift; fi;
+    -R | "--rows-per-page"* ) if [[ "${1}" != *'='* ]]; then shift; fi;
                       intTemp="${1##*=}";
                       if [[ "${intTemp}" =~ ^[0-9]+$ ]]; then intRowsPerPage=${intTemp}; fi;
                     ;;
@@ -318,15 +370,15 @@ ${cmdDbgEcho} "Line ${LINENO}: dirTemplates=${dirStyles}";
   then
       if [[ -z "${intThreads}" ]];
       then
-          echo "Running the plain Jane benchmark. dirTestPath=${dirTestPath}, argUmount=${argUmount}, PWD=${PWD}"
-          #_# iozone -Raz -n 4 -f "${dirTestPath}/testfile" "${argUmount}" | tee iozone.out;
+          echo "Running the plain Jane benchmark. dirTestPath=${dirTestPath}, argUmount=${argUmount}, PWD=${PWD}";
+          iozone -Raz -n 4 -f "${dirTestPath}/testfile" "${argUmount}" | tee iozone.out;
       else
           # test with ${intThreads} threads.
           for item in $(seq 1 ${intThreads});
           do
               strTestFiles+=" ${dirTestPath}/testFile${item}";
           done;
-          #_# iozone -Rz -n 4 -F "${strTestFiles}" -t ${intThreads} "${argUmount}" | tee iozone.out;
+          iozone -Rz -n 4 -F "${strTestFiles}" -t ${intThreads} "${argUmount}" | tee iozone.out;
       fi;
       echo "Results saved to ./iozone.out.";
   else
@@ -348,10 +400,10 @@ ${cmdDbgEcho} "Line ${LINENO}: dirTemplates=${dirStyles}";
 for itemCurrentBenchmark in "${arrBenchmarks[@]}";
 do
 
-  ${cmdDbgEcho} "Line ${LINENO}: dirIozoneBin=${dirIozoneBin}, Current benchmark=${itemCurrentBenchmark}"
+  ${cmdDbgEcho} "Line ${LINENO}: dirIozoneBin=${dirIozoneBin}, Current benchmark=${itemCurrentBenchmark}";
 
-  echo "Generating data for ${itemCurrentBenchmark}..."
-  ${cmdDbgEcho} "fileInput=${fileInput}"
+  echo "Generating data for ${itemCurrentBenchmark}...";
+  ${cmdDbgEcho} "fileInput=${fileInput}";
   ${cmdDbgEcho} $(ls -lh "${dirIozoneBin}/gengnuplot.sh");
   ${cmdDbgEcho} "Line ${LINENO}: Pausing for 1 seconds..."; sleep .1
   "${dirIozoneBin}/gengnuplot.sh" "${fileInput}" ${itemCurrentBenchmark};
@@ -368,8 +420,8 @@ done;
   #
   # ###############################
 
-echo "Generating charts..."
-gnuplot "${dirIozoneBin}/gnu3d.dem"
+echo "Generating charts...";
+gnuplot "${dirIozoneBin}/gnu3d.dem";
 unset itemCurrentBenchmark;
 
 # percentage width for tables in grid
@@ -419,7 +471,7 @@ do
             exec > "${itemCurrentBenchmark}_page${intPageCurrent}.html";
             ${cmdDbgEcho} "Line ${LINENO}: stdout redirected to file for prod, to console for debug mode." >${devTTY}
             ${cmdDbgEcho} "Line ${LINENO}, benchmark=${itemCurrentBenchmark} in ${PWD}, intChartCounter==${intChartCounter}, intRowCurrent==${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing for ${intDebugDelay} seconds..."  >${devTTY} ; sleep ${intDebugDelay};
-            echo -n '<style>
+            echo -n '<html><style>
             .grid-container {
             display: grid;  /* Creates 3 columns of equal width (1fr unit) */
             grid-template-columns: repeat('${intColumns}', 1fr); /* Creates rows with automatic height */
@@ -459,7 +511,7 @@ do
             }
             </style>
             ';
-            echo "<h1>Performance benchmark: ${itemCurrentBenchmark}, raw data page ${intPageCurrent}.</h1>";
+            echo "<body><h1>Performance benchmark: ${itemCurrentBenchmark}, raw data page ${intPageCurrent}.</h1>";
         fi;
         if [[ $(( ${intChartCounter} % ${intColumns} )) -eq 1  ]];
         then
@@ -501,7 +553,7 @@ do
         if [[ ( ${intRowCurrent} -eq ${intRowsPerPage} && $(( ${intChartCounter} % ${intColumns} )) -eq 0 ) || ${intChartCounter} -eq ${#arrTestFiles[@]} ]];
         then
             #<----<< End of page
-            echo "</div>"  ;
+            echo "</div></body></html>"  ;
             ${cmdDbgEcho} "Line ${LINENO}: ended page, benchmark=${itemCurrentBenchmark} PWD=${PWD}, intChartCounter==${intChartCounter} intRowCurrent==${intRowCurrent}, intPageCurrent=${intPageCurrent}, pausing..." >${devTTY} ; sleep ${intDebugDelay};
             exec 1>&3;
             exec 3>&-;
@@ -546,62 +598,68 @@ then
   if [[ "${dirTemplates}" == "${dirIozone}/templates" && ! -d "${dirWorking}/templates" ]];
   then
     echo "Attention! Copying ${dirIozone}/templates to ${dirWorking}";
-    cp -ar "${dirIozone}/templates" "${dirWorking}/";
+    cp -r "${dirIozone}/templates" "${dirWorking}/";
     bTemplates=1;
     dirTemplates_bak="${dirTemplates}";
     dirTemplates="${dirWorking}/templates";
   fi;
 
-  sed -i "s|dirWorking|${dirWorking}\/templates|g" "templates/"*".md"
+  sed -i "s|dirWorking|${dirWorking}|g" "templates/"*".md"
+  sed -i "s|dirIozone|${dirIozone}|g" "templates/"*".md"
 
-  echo "${LINENO} building PDFs"
+  "${LINENO} building PDFs...";
   declare -a itemCurrentBenchmark;
 
-  pandoc -f markdown_phpextra+raw_html "${dirTemplates}/coversheet.md" -t html -c "${dirStyles}/reportpage.css" --pdf-engine=wkhtmltopdf --pdf-engine-opt=--enable-local-file-access --pdf-engine-opt=--margin-top --pdf-engine-opt=0 --pdf-engine-opt=--margin-bottom --pdf-engine-opt=0 --pdf-engine-opt=--margin-left --pdf-engine-opt=0 --pdf-engine-opt=--margin-right --pdf-engine-opt=0 --pdf-engine-opt=--page-size --pdf-engine-opt=Letter -o "coversheet.pdf"
+  pandoc -f markdown_phpextra+raw_html "${dirTemplates}/coversheet.md" -t html -c "${dirStyles}/reportpage.css" --pdf-engine=wkhtmltopdf --pdf-engine-opt=--enable-local-file-access --pdf-engine-opt=--margin-top --pdf-engine-opt=0 --pdf-engine-opt=--margin-bottom --pdf-engine-opt=0 --pdf-engine-opt=--margin-left --pdf-engine-opt=0 --pdf-engine-opt=--margin-right --pdf-engine-opt=0 --pdf-engine-opt=--page-size --pdf-engine-opt=Letter -o "coversheet.pdf";
 
-  for strFile in "${dirTemplates}/{performance-testing.md,ReportPage.md}";
-  do
-    echo "strFile value: [ ${strFile} ]";
-    pandoc -f markdown_phpextra+raw_html "${strFile}" -t html -c "styles/reportpage.css" --pdf-engine=wkhtmltopdf --pdf-engine-opt=--enable-local-file-access --pdf-engine-opt=--margin-top --pdf-engine-opt=0 --pdf-engine-opt=--margin-bottom --pdf-engine-opt=0 --pdf-engine-opt=--margin-left --pdf-engine-opt=0 --pdf-engine-opt=--margin-right --pdf-engine-opt=0 --pdf-engine-opt=--page-size --pdf-engine-opt=Letter -o "${strFile%.*}.pdf";
-  done;
+    strFile="performance-testing.md"
+    ${cmdDbgEcho} "strFile value: [ ${strFile} ]";
+    pandoc -f markdown_phpextra+raw_html "${dirTemplates}/${strFile}" -t html -c "styles/reportpage.css" --pdf-engine=wkhtmltopdf --pdf-engine-opt=--enable-local-file-access --pdf-engine-opt=--margin-top --pdf-engine-opt=0 --pdf-engine-opt=--margin-bottom --pdf-engine-opt=0 --pdf-engine-opt=--margin-left --pdf-engine-opt=0 --pdf-engine-opt=--margin-right --pdf-engine-opt=0 --pdf-engine-opt=--page-size --pdf-engine-opt=Letter -o "${dirWorking}/${strFile%.*}.pdf";
 
   for itemBenchmark in "${arrBenchmarks[@]}";
   do
-      echo "${LINENO} working on ${itemBenchmark} PDFs..."
-    if [ -f "${dirTemplates}/${itemBenchmark}.md" ]
+      ${cmdDbgEcho} "${LINENO} working on ${itemBenchmark} PDFs...";
+    if [ -f "${dirTemplates}/${itemBenchmark}.md" ];
       then
-        pandoc -f markdown_phpextra+raw_html "${dirTemplates}/${itemBenchmark}.md" -t html -c "${dirStyles}/reportpage.css" --pdf-engine=wkhtmltopdf --pdf-engine-opt=--enable-local-file-access --pdf-engine-opt=--margin-top --pdf-engine-opt=0 --pdf-engine-opt=--margin-bottom --pdf-engine-opt=0 --pdf-engine-opt=--margin-left --pdf-engine-opt=0 --pdf-engine-opt=--margin-right --pdf-engine-opt=0 --pdf-engine-opt=--page-size --pdf-engine-opt=Letter -o "${itemBenchmark}.pdf";
+        pandoc -f markdown_phpextra+raw_html "${dirTemplates}/${itemBenchmark}.md" -t html -c "${dirStyles}/reportpage.css" --pdf-engine=wkhtmltopdf --pdf-engine-opt=--enable-local-file-access --pdf-engine-opt=--margin-top --pdf-engine-opt=0 --pdf-engine-opt=--margin-bottom --pdf-engine-opt=0 --pdf-engine-opt=--margin-left --pdf-engine-opt=0 --pdf-engine-opt=--margin-right --pdf-engine-opt=0 --pdf-engine-opt=--page-size --pdf-engine-opt=Letter -o "${itemBenchmark}.pdf" && echo "Built ${itemBenchmark}.pdf";
     fi;
 
-    echo "${LINENO}: checking on ${itemBenchmark}"
-    ls "${itemBenchmark}/${itemBenchmark}"_page*.html
+    ${cmdDbgEcho} "${LINENO}: checking on ${itemBenchmark}";
     for tmpReportSource in "${itemBenchmark}/${itemBenchmark}"_page*.html;
     do
-        echo "${LINENO} working on ${tmpReportSource}"
-        ls -lh "${tmpReportSource}"
-        pandoc -f markdown_phpextra+raw_html "${tmpReportSource}" -t html -c "${dirStyles}/reportpage.css" --pdf-engine=wkhtmltopdf --pdf-engine-opt=--enable-local-file-access --pdf-engine-opt=--margin-top --pdf-engine-opt=0 --pdf-engine-opt=--margin-bottom --pdf-engine-opt=0 --pdf-engine-opt=--margin-left --pdf-engine-opt=0 --pdf-engine-opt=--margin-right --pdf-engine-opt=0 --pdf-engine-opt=--page-size --pdf-engine-opt=Letter -o "$(basename ${tmpReportSource%.*}.pdf)";
+        ${cmdDbgEcho} "${LINENO} working on ${tmpReportSource}";
+        ls -lh "${tmpReportSource}";
+        pandoc -f markdown_phpextra+raw_html "${tmpReportSource}" -t html -c "${dirStyles}/reportpage.css" --pdf-engine=wkhtmltopdf --pdf-engine-opt=--enable-local-file-access --pdf-engine-opt=--margin-top --pdf-engine-opt=0 --pdf-engine-opt=--margin-bottom --pdf-engine-opt=0 --pdf-engine-opt=--margin-left --pdf-engine-opt=0 --pdf-engine-opt=--margin-right --pdf-engine-opt=0 --pdf-engine-opt=--page-size --pdf-engine-opt=Letter -o "$(basename ${tmpReportSource%.*}.pdf)" && echo "Built $(basename ${tmpReportSource%.*}.pdf)";
     done;
 
   done;
 
+  unset strFile lstFiles1 lstFiles2;
+
+  for strFile in coversheet performance-testing ${arrBenchmarks[@]};
+  do
+    lstFiles1=("${lstFiles1} ${strFile}.pdf");
+  done;
+  ${cmdDbgEcho} "List of PDF files: [ ${lstFiles1} ]";
+
+  pdfunite ${lstFiles1} "${strReportName%.*}.intermediate.pdf";
+
+  for strFile in ${arrBenchmarks[@]};
+  do
+    lstFiles2+="$(ls -1 ${strFile}_* | tr '\n' ' ') ";
+  done;
+  echo "lstFiles2: [ ${lstFiles2} ]";
+
+  pdfunite  "${strReportName%.*}.intermediate.pdf" ${lstFiles2} "${strReportName%.*}.pdf" && rm "${strReportName%.*}.intermediate.pdf";
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if [ ${optGarbageCollection} -eq 1 ];
+  then
+    rm -rfv ${arrBenchmarks[@]};
+    for item in ${arrBenchmarks[@]} performance-testing.pdf coversheet.pdf ;
+    do
+      rm -v ${item}*.pdf;
+    done;
+  fi;
 
 fi;
