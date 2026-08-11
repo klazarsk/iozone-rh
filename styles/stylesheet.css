@@ -1,4 +1,6 @@
-body { font: 16px/1.5 "RedHatText-Regular", sans-serif; }
+body { 
+  font: 16px/1.5 "RedHatText-Regular", sans-serif; 
+}
 
 p {
   font: small-caps 16px/1.5 "RedHatText-Regular", sans-serif;
@@ -70,7 +72,7 @@ align: center
 
 title-page:
 text-align: left
-background-image: image:redhatConsulting.png[]
+background-image: image:img/redhatConsulting.png[]
 title:
 top: 60%
 logo:

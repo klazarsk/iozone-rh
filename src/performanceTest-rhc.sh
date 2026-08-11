@@ -26,6 +26,12 @@
 #
 ###############################
 #
+# Dependencies: 
+#
+# * gnuplot
+# * pandoc 
+# * wkhtmltopdf
+
 # Set some sane default values for stuff 
 
 dirWorking="${PWD}";
@@ -318,6 +324,7 @@ done;
 
   if [[ "${optSetupTemplates}" -eq 1 && ( -n "${fileInput}" || -n "${dirTestPath}" || -n "${dirMountPoint}" ) ]];
   then
+    echo "Setting up templates...";
     fnSetupTemplates;
   fi;
 
