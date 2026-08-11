@@ -617,7 +617,10 @@ then
   ${cmdDbgEcho} "${LINENO} building PDFs...";
   declare -a itemCurrentBenchmark;
 
-  pandoc -f markdown_phpextra+raw_html "${dirTemplates}/coversheet.md" -t html -c "${dirStyles}/reportpage.css" --pdf-engine=wkhtmltopdf --pdf-engine-opt=--enable-local-file-access --pdf-engine-opt=--margin-top --pdf-engine-opt=0 --pdf-engine-opt=--margin-bottom --pdf-engine-opt=0 --pdf-engine-opt=--margin-left --pdf-engine-opt=0 --pdf-engine-opt=--margin-right --pdf-engine-opt=0 --pdf-engine-opt=--page-size --pdf-engine-opt=Letter -o "coversheet.pdf";
+  #_# pandoc -f markdown_phpextra+raw_html "${dirTemplates}/coversheet.md" -t html -c "${dirStyles}/reportpage.css" --pdf-engine=wkhtmltopdf --pdf-engine-opt=--enable-local-file-access --pdf-engine-opt=--margin-top --pdf-engine-opt=0 --pdf-engine-opt=--margin-bottom --pdf-engine-opt=0 --pdf-engine-opt=--margin-left --pdf-engine-opt=0 --pdf-engine-opt=--margin-right --pdf-engine-opt=0 --pdf-engine-opt=--page-size --pdf-engine-opt=Letter -o "coversheet.pdf";
+
+  pandoc -f markdown_phpextra+raw_html "${dirTemplates}/coversheet.md" -t html --pdf-engine=wkhtmltopdf --pdf-engine-opt=--enable-local-file-access --pdf-engine-opt=--margin-top --pdf-engine-opt=0 --pdf-engine-opt=--margin-bottom --pdf-engine-opt=0 --pdf-engine-opt=--margin-left --pdf-engine-opt=0 --pdf-engine-opt=--margin-right --pdf-engine-opt=0 --pdf-engine-opt=--page-size --pdf-engine-opt=Letter -o coversheet.pdf
+
 
     strFile="performance-testing.md"
     ${cmdDbgEcho} "strFile value: [ ${strFile} ]";
