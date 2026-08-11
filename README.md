@@ -9,7 +9,7 @@ to address graphing bugs and to incorporate better reporting.
 
 ## src
 
-The source code
+Bash
 
 ## docs
 
